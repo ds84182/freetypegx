@@ -60,13 +60,17 @@
  * \code
  * FreeTypeGX *freeTypeGX = new FreeTypeGX(32);
  * \endcode
- * Alternately you can specify a texture format you would like to which you would like to render the font characters. 
+ * A;ternately you can specify a flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, GX_TF_RGB565);
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true);
  * \endcode
- * Furthermore you can also specify a third flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
+ * Furthermore you can also specify a texture format to which you would like to render the font characters. 
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, GX_TF_RGB565, true);
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true, GX_TF_RGB565);
+ * \endcode
+ * Lastly, you can also specify a positional format which you define in your graphics subsystem declaration. 
+ * \code
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true, GX_TF_RGB565, GX_POS_XY);
  * \endcode
  * Currently supported textures are:
  * \li <i>GX_TF_I4</i>
@@ -132,7 +136,7 @@ typedef struct fontCharData_ {
 /*! \class FreeTypeGX
  * \brief Wrapper class for the libFreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.2.1
+ * \version 0.2.2
  * 
  * FreeTypeGX acts as a wrapper class for the libFreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -146,6 +150,7 @@ class FreeTypeGX {
 		FT_GlyphSlot ftSlot;	/**< FreeType reusable FT_GlyphSlot glyph container object. */
 
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
+		uint8_t positionFormat;		/**< Defined position format of the texture. */
 		std::map<wchar_t, fontCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
 
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
@@ -157,7 +162,7 @@ class FreeTypeGX {
 		void copyTextureToFramebuffer(GXTexObj *texObj, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color);
 
 	public:
-		FreeTypeGX(FT_UInt pointSize, uint8_t textureFormat = GX_TF_RGBA8, bool cacheAll = false);
+		FreeTypeGX(FT_UInt pointSize, bool cacheAll = false, uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
 		~FreeTypeGX();
 
 		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color);
