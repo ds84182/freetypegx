@@ -25,17 +25,19 @@
  * Default constructor for the FreeTypeGX class.
  * 
  * @param pointSize	The desired point size this wrapper's configured font face.
- * @param textureFormat	Optional format (GX_TF_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_TF_RGBA8.
  * @param cacheAll	Optional flag to specify if all font characters should be cached when the class object is created. If specified as false the characters only become cached the first time they are used. If not specified default value is false.
+ * @param textureFormat	Optional format (GX_TF_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_TF_RGBA8.
+ * @param positionFormat	Optional positional format (GX_POS_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_POS_XYZ.
  */ 
 
-FreeTypeGX::FreeTypeGX(FT_UInt pointSize, uint8_t textureFormat, bool cacheAll) {
+FreeTypeGX::FreeTypeGX(FT_UInt pointSize, bool cacheAll, uint8_t textureFormat, uint8_t positionFormat) {
 	FT_Init_FreeType(&this->ftLibrary);
 	FT_New_Memory_Face(this->ftLibrary, (FT_Byte *)fontface, fontsize, 0, &this->ftFace);
 	FT_Set_Pixel_Sizes(this->ftFace, 0, pointSize);
 
 	this->ftSlot = this->ftFace->glyph;
 	this->textureFormat = textureFormat;
+	this->positionFormat = positionFormat;
 	
 	if (cacheAll) {
 		this->cacheAllGlyphData();
@@ -262,7 +264,6 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 		
 		if(glyphData != NULL) {
 			GX_InitTexObj(&glyphTexture, glyphData->glyphDataTexture, glyphData->textureWidth, glyphData->textureHeight, this->textureFormat, GX_CLAMP, GX_CLAMP, GX_FALSE);
-	
 			this->copyTextureToFramebuffer(&glyphTexture, glyphData->textureWidth, glyphData->textureHeight, x_pos, y - glyphData->renderOffsetY, color);
 		    x_pos += glyphData->glyphAdvanceX;
 
@@ -395,28 +396,57 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint16_t texWidth, u
 	f32	f32TexWidth = texWidth,
 		f32TexHeight = texHeight;
 
-	Mtx model;
-	guMtxIdentity(model);
-	guMtxTransApply(model, model, screenX, screenY, 0.0f);
-	GX_LoadPosMtxImm(model, GX_PNMTX0);
+//	Mtx model;
+//	guMtxIdentity(model);
+//	guMtxTransApply(model, model, screenX, screenY, 0.0f);
+//	GX_LoadPosMtxImm(model, GX_PNMTX0);
 
 	GX_LoadTexObj(texObj, GX_TEXMAP0);
 
+	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
+  	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+  	
 	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-		GX_Position2f32(0, 0);
-		GX_Color4u8(color.r, color.g, color.b, color.a);
- 		GX_TexCoord2f32(0.0f, 0.0f);
-
- 		GX_Position2f32(f32TexWidth, 0);
-		GX_Color4u8(color.r, color.g, color.b, color.a);
-		GX_TexCoord2f32(1.0f, 0.0f);
-
-		GX_Position2f32(f32TexWidth, f32TexHeight);
-		GX_Color4u8(color.r, color.g, color.b, color.a);
-		GX_TexCoord2f32(1.0f, 1.0f);
-
-		GX_Position2f32(0, f32TexHeight);
-		GX_Color4u8(color.r, color.g, color.b, color.a);
-		GX_TexCoord2f32(0.0f, 1.0f);
+  	switch(this->positionFormat) {
+	  	case GX_POS_XY:
+			GX_Position2f32(screenX, screenY);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+	 		GX_TexCoord2f32(0.0f, 0.0f);
+	
+	 		GX_Position2f32(f32TexWidth + screenX, screenY);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(1.0f, 0.0f);
+	
+			GX_Position2f32(f32TexWidth + screenX, f32TexHeight + screenY);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(1.0f, 1.0f);
+	
+			GX_Position2f32(screenX, f32TexHeight + screenY);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(0.0f, 1.0f);
+			break;
+	  	case GX_POS_XYZ:
+			GX_Position3f32(screenX, screenY, 0);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+	 		GX_TexCoord2f32(0.0f, 0.0f);
+	
+	 		GX_Position3f32(f32TexWidth + screenX, screenY, 0);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(1.0f, 0.0f);
+	
+			GX_Position3f32(f32TexWidth + screenX, f32TexHeight + screenY, 0);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(1.0f, 1.0f);
+	
+			GX_Position3f32(screenX, f32TexHeight + screenY, 0);
+			GX_Color4u8(color.r, color.g, color.b, color.a);
+			GX_TexCoord2f32(0.0f, 1.0f);
+			break;
+	  	default:
+	  		break;
+  	}
 	GX_End();
+
+	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
+  	GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
 }
