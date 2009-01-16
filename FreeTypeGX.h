@@ -76,7 +76,7 @@
  * 
  * \section sec_freetypegx_usage FreeTypeGX Usage
  * 
- * -# Within the file you included the FreeTypeGX.h file create an instance object of the FreeTypeGX:
+ * -# Within the file you included the FreeTypeGX.h header create an instance object of the FreeTypeGX class:
  * \code
  * FreeTypeGX *freeTypeGX = new FreeTypeGX();
  * \endcode
@@ -84,7 +84,7 @@
  * \code
  * FreeTypeGX *freeTypeGX = new FreeTypeGX(GX_TF_RGB565);
  * \endcode
- * Furthermore, you can also specify a positional format which you define in your graphics subsystem declaration. Note that the default value for this parameter is GX_POS_XYZ.
+ * Furthermore, you can also specify a positional format as defined in your graphics subsystem initialization. Note that the default value for this parameter is GX_POS_XYZ.
  * \code
  * FreeTypeGX *freeTypeGX = new FreeTypeGX(GX_TF_RGB565, GX_POS_XY);
  * \endcode
