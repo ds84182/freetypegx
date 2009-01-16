@@ -24,24 +24,15 @@
 /**
  * Default constructor for the FreeTypeGX class.
  * 
- * @param pointSize	The desired point size this wrapper's configured font face.
- * @param cacheAll	Optional flag to specify if all font characters should be cached when the class object is created. If specified as false the characters only become cached the first time they are used. If not specified default value is false.
  * @param textureFormat	Optional format (GX_TF_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_TF_RGBA8.
  * @param positionFormat	Optional positional format (GX_POS_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_POS_XYZ.
  */ 
 
-FreeTypeGX::FreeTypeGX(FT_UInt pointSize, bool cacheAll, uint8_t textureFormat, uint8_t positionFormat) {
+FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t positionFormat) {
 	FT_Init_FreeType(&this->ftLibrary);
-	FT_New_Memory_Face(this->ftLibrary, (FT_Byte *)fontface, fontsize, 0, &this->ftFace);
-	FT_Set_Pixel_Sizes(this->ftFace, 0, pointSize);
 
-	this->ftSlot = this->ftFace->glyph;
 	this->textureFormat = textureFormat;
 	this->positionFormat = positionFormat;
-	
-	if (cacheAll) {
-		this->cacheAllGlyphData();
-	}
 }
 
 /**
@@ -49,10 +40,53 @@ FreeTypeGX::FreeTypeGX(FT_UInt pointSize, bool cacheAll, uint8_t textureFormat, 
  */
 
 FreeTypeGX::~FreeTypeGX() {
-	
+	this->clearFontData();
+}
+
+/**
+ * Clears all loaded font glyph data.
+ * 
+ * This routine clears all members of the font map structure and frees all allocated memory back to the system.
+ */
+void FreeTypeGX::clearFontData() {
 	for( std::map<wchar_t, fontCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
 		free(i->second.glyphDataTexture);
 	}
+	
+	this->fontData.clear();
+}
+/**
+ * Loads and processes a specified true type font buffer to a specific point size.
+ * 
+ * This routine takes a precompiled true type font buffer and loads the necessary processed data into memory. This routine should be called before drawText will succeed. 
+ * 
+ * @param fontBuffer	A pointer in memory to a precompiled true type font buffer.
+ * @param bufferSize	Size of the true type font buffer in bytes.
+ * @param pointSize	The desired point size this wrapper's configured font face.
+ * @param cacheAll	Optional flag to specify if all font characters should be cached when the class object is created. If specified as false the characters only become cached the first time they are used. If not specified default value is false.
+ */
+
+uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll) {
+	this->clearFontData();
+
+	FT_New_Memory_Face(this->ftLibrary, (FT_Byte *)fontBuffer, bufferSize, 0, &this->ftFace);
+	FT_Set_Pixel_Sizes(this->ftFace, 0, pointSize);
+
+	this->ftSlot = this->ftFace->glyph;
+
+	if (cacheAll) {
+		return this->cacheAllGlyphData();
+	}
+	
+	return 0;
+}
+
+/**
+ * 
+ * \overload
+ */
+uint16_t FreeTypeGX::loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll) {
+	return this->loadFont((uint8_t *)fontBuffer, bufferSize, pointSize, cacheAll);
 }
 
 /**

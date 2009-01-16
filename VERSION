@@ -1,4 +1,13 @@
 -------------
+Version 0.2.2
+-------------
+- Fixed compatibility problems with GRRLIB.
+- Extended compatibility for graphics systems initialized with the GX_POS_XYZ pixel format.
+- Decoupled loading code from class construction.
+- Removed the need for fontface.s file and modifications. An arbitrary number of fonts can now be precompiled into the project binary and loaded as needed.
+- Relevant documentation update.
+
+-------------
 Version 0.2.1
 -------------
 - Addition of getWidth and getHeight methods.

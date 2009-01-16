@@ -35,9 +35,6 @@
  * -# Ensure that you have the <a href = "http://code.google.com/p/metaphrasis">Metaphrasis</a> library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Extract the FreeTypeGX archive.
  * -# Copy the contents of the <i>src</i> directory into your project's development path.
- * -# Place a copy of the desired TrueType or OpenType font you wish to use in the FreeTypeGX/ttf directory.
- * -# Modify the fontface.s file and change the value of the incbin variable to point to your font.
- * -# Modify the fontface.s file and change the value of the fontsize variable to the byte-size of the font file.
  * -# Include the FreeTypeGX header file in your code using syntax such as the following:
  * \code
  * #include "FreeTypeGX.h"
@@ -54,24 +51,44 @@
  * #include "FreeTypeGX.h"
  * \endcode
  * 
- * \section sec_usage Usage
+ * \section sec_freetypegx_prerequisites FreeTypeGX Prerequisites
  * 
- * -# Within the file you included the FreeTypeGX.h file create an instance object of the FreeTypeGX class passing in the desired font point size:
+ * Before you begin using FreeTypeGX in your project you must ensure that the desired font in compiled into your project. For this example I will assume you are building your project with a Makefile using devKitPro evironment and are attempting to include a font whose filename is rursus_compact_mono.ttf. 
+ *
+ * -# Copy the font into a directory which will be processed by the project's Makefile. If you are unsure about where you should place your font just copy the it into your project's source directory.
+ * \n\n
+ * -# Modify the Makefile to convert the font into an object file:
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32);
+ * %.ttf.o : %.ttf
+ * 	@echo $(notdir $<)
+ * 	$(bin2o)
  * \endcode
- * A;ternately you can specify a flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
+ * \n
+ * -# Include the font object's generated header file in your source code:
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true);
+ * #include "rursus_compact_mono_ttf.h"
  * \endcode
- * Furthermore you can also specify a texture format to which you would like to render the font characters. 
+ * This header file defines the two variables that you will need for use within your project:
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true, GX_TF_RGB565);
+ * extern const u8 rursus_compact_mono_ttf[];	A pointer to the font buffer within the compiled project.
+ * extern const u32 rursus_compact_mono_ttf_size;	The size of the font's buffer in bytes.
  * \endcode
- * Lastly, you can also specify a positional format which you define in your graphics subsystem declaration. 
+ * 
+ * \section sec_freetypegx_usage FreeTypeGX Usage
+ * 
+ * -# Within the file you included the FreeTypeGX.h file create an instance object of the FreeTypeGX:
  * \code
- * FreeTypeGX *freeTypeGX = new FreeTypeGX(32, true, GX_TF_RGB565, GX_POS_XY);
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX();
  * \endcode
+ * Alternately you can specify a texture format to which you would like to render the font characters. Note that the default value for this parameter is GX_TF_RGBA8.
+ * \code
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX(GX_TF_RGB565);
+ * \endcode
+ * Furthermore, you can also specify a positional format which you define in your graphics subsystem declaration. Note that the default value for this parameter is GX_POS_XYZ.
+ * \code
+ * FreeTypeGX *freeTypeGX = new FreeTypeGX(GX_TF_RGB565, GX_POS_XY);
+ * \endcode
+ * \n
  * Currently supported textures are:
  * \li <i>GX_TF_I4</i>
  * \li <i>GX_TF_I8</i>
@@ -80,6 +97,22 @@
  * \li <i>GX_TF_RGB565</i>
  * \li <i>GX_TF_RGB5A3</i>
  * \li <i>GX_TF_RGBA8</i>
+ * 
+ * \n
+ * Currently supported position formats are:
+ * \li <i>GX_POS_XY</i>
+ * \li <i>GX_POS_XYZ</i>
+ * 
+ * \n
+ * -# Using the allocated FreeTypeGX instance object call the loadFont function to load the font from the compiled buffer and specify the desired point size:
+ * \code
+ * fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64);
+ * \endcode
+ * Alternately you can specify a flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
+ * \code
+ * fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64, true);
+ * \endcode
+ * \n
  * -# Using the allocated FreeTypeGX instance object call the drawText function to print a string at the specified screen X and Y coordinates to the current EFB:
  * \code
  * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"));
@@ -156,14 +189,18 @@ class FreeTypeGX {
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
 		static uint16_t adjustTextureHeight(uint16_t textureHeight, uint8_t textureFormat);
 
+		void clearFontData();
 		uint16_t cacheAllGlyphData();
 		fontCharData *cacheGlyphData(wchar_t charCode);
 		void loadGlyphData(FT_Bitmap *bmp, fontCharData *charData);
 		void copyTextureToFramebuffer(GXTexObj *texObj, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color);
 
 	public:
-		FreeTypeGX(FT_UInt pointSize, bool cacheAll = false, uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
+		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
 		~FreeTypeGX();
+
+		uint16_t loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
+		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 
 		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color);
 		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text);
