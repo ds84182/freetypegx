@@ -1,4 +1,14 @@
 -------------
+Version 0.2.3
+-------------
+- Addition of left, center, and right text justification.
+- Addition of top, middle, and bottom text alignment.
+- Addition of underline and strikethrough text styling.
+- Addition of kerning support.
+- Fixed display issues when font characters drifted into negative coordinate territory.
+
+
+-------------
 Version 0.2.2
 -------------
 - Fixed compatibility problems with GRRLIB.

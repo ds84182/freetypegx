@@ -361,6 +361,10 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 		}
 	}
 	
+	if(textStyle & 0x0F00) {
+		this->drawTextFeature(x - x_offset, y, this->getWidth(text), this->getOffset(text), textStyle, color);
+	}
+	
 	return printed;
 }
 
@@ -369,6 +373,44 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
  */
 uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color, uint16_t textStyle) {
 	return this->drawText(x, y, (wchar_t *)text, color, textStyle);
+}
+
+void FreeTypeGX::drawTextFeature(uint16_t x, uint16_t y, uint16_t width,  ftgxDataOffset offsetData, uint16_t format, GXColor color) {
+	uint16_t featureHeight = this->ftPointSize >> 4 > 0 ? this->ftPointSize >> 4 : 1;
+	
+	if (format & FTGX_STYLE_UNDERLINE ) {
+		switch(format & 0x00F0) {
+			case FTGX_ALIGN_TOP:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + offsetData.max + 1, color);
+				break;
+			case FTGX_ALIGN_MIDDLE:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + ((offsetData.max - offsetData.min) >> 1) + 1, color);
+				break;
+			case FTGX_ALIGN_BOTTOM:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - offsetData.min, color);
+				break;
+			default:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + 1, color);
+				break;
+		}
+	}
+	
+	if (format & FTGX_STYLE_STRIKE ) {
+		switch(format & 0x00F0) {
+			case FTGX_ALIGN_TOP:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + ((offsetData.max + offsetData.min) >> 1), color);
+				break;
+			case FTGX_ALIGN_MIDDLE:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y, color);
+				break;
+			case FTGX_ALIGN_BOTTOM:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - ((offsetData.max + offsetData.min) >> 1), color);
+				break;
+			default:
+				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - ((offsetData.max - offsetData.min) >> 1), color);
+				break;
+		}
+	}
 }
 
 /**
@@ -511,7 +553,7 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t const *text) {
  * @param screenY	The screen Y coordinate at which to output the rendered texture.
  * @param color	Color to apply to the texture.
  */
-bool FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color) {
+void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color) {
 
 	f32	f32TexWidth = texWidth,
 		f32TexHeight = texHeight;
