@@ -137,22 +137,20 @@
 #include <gccore.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_BITMAP_H
 #include <Metaphrasis.h>
 
 #include <malloc.h>
 #include <string.h>
 #include <map>
 
-
-extern char fontface[];	/**< TrueType font face initializer from fontface.s */
-extern int fontsize;	/**< TrueType font face initializer from fontface.s */
-
-/*! \struct fontCharData_
+/*! \struct ftgxCharData_
  * 
  * Font face character glyph relevant data structure.
  */
-typedef struct fontCharData_ {
+typedef struct ftgxCharData_ {
 	uint16_t glyphAdvanceX;	/**< Character glyph X coordinate advance in pixels. */
+	uint16_t glyphIndex;	/**< Charachter glyph index in the font face. */
 
 	uint16_t textureWidth;	/**< Texture width in pixels/bytes. */
 	uint16_t textureHeight;	/**< Texture glyph height in pixels/bytes. */
@@ -162,14 +160,36 @@ typedef struct fontCharData_ {
 	uint16_t renderOffsetMin;	/**< Texture Y axis bearing minimum value. */
 
 	uint32_t* glyphDataTexture;	/**< Glyph texture bitmap data buffer. */
-} fontCharData;
+} ftgxCharData;
+
+/*! \struct ftgxDataOffset_
+ * 
+ * Offset structure which hold both a maximum and minimum value.
+ */
+typedef struct ftgxDataOffset_ {
+	uint16_t max;	/**< Maximum data offset. */
+	uint16_t min;	/**< Minimum data offset. */
+} ftgxDataOffset;
 
 #define _TEXT(t) L ## t /**< Unicode helper macro. */
+
+#define FTGX_JUSTIFY_LEFT		0x0001
+#define FTGX_JUSTIFY_CENTER		0x0002
+#define FTGX_JUSTIFY_RIGHT		0x0004
+
+#define FTGX_ALIGN_TOP			0x0010
+#define FTGX_ALIGN_MIDDLE		0x0020
+#define FTGX_ALIGN_BOTTOM		0x0040
+
+#define FTGX_STYLE_UNDERLINE	0x0100
+#define FTGX_STYLE_STRIKE		0x0200
+#define FTGX_STYLE_BOLD			0x0400
+#define FTGX_STYLE_ITALICS		0x0800
 
 /*! \class FreeTypeGX
  * \brief Wrapper class for the libFreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.2.2
+ * \version 0.2.3
  * 
  * FreeTypeGX acts as a wrapper class for the libFreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -181,20 +201,26 @@ class FreeTypeGX {
 		FT_Library ftLibrary;	/**< FreeType FT_Library instance. */
 		FT_Face ftFace;			/**< FreeType reusable FT_Face typographic object. */
 		FT_GlyphSlot ftSlot;	/**< FreeType reusable FT_GlyphSlot glyph container object. */
-
+		FT_UInt ftPointSize;	/**< Requested size of the rendered font. */
+		bool ftKerningEnabled;	/**< Flag indicating the availability of font kerning. */
+		
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
 		uint8_t positionFormat;		/**< Defined position format of the texture. */
-		std::map<wchar_t, fontCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
+		std::map<wchar_t, ftgxCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
 
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
 		static uint16_t adjustTextureHeight(uint16_t textureHeight, uint8_t textureFormat);
 
+		static uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
+		static uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
+
 		void clearFontData();
 		uint16_t cacheAllGlyphData();
-		fontCharData *cacheGlyphData(wchar_t charCode);
-		void loadGlyphData(FT_Bitmap *bmp, fontCharData *charData);
-		void copyTextureToFramebuffer(GXTexObj *texObj, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color);
-
+		ftgxCharData *cacheGlyphData(wchar_t charCode);
+		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
+		static void copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color);
+		static void copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, uint16_t screenX, uint16_t screenY, GXColor color);
+		
 	public:
 		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
 		~FreeTypeGX();
@@ -202,15 +228,16 @@ class FreeTypeGX {
 		uint16_t loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text);
+		static wchar_t* charToWideChar(char* p);
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = (GXColor){0xff, 0xff, 0xff, 0xff}, uint16_t textStyling = 0);
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = (GXColor){0xff, 0xff, 0xff, 0xff}, uint16_t textStyling = 0);
 
 		uint16_t getWidth(wchar_t *text);
 		uint16_t getWidth(wchar_t const *text);
 		uint16_t getHeight(wchar_t *text);
 		uint16_t getHeight(wchar_t const *text);
+		ftgxDataOffset getOffset(wchar_t *text);
+		ftgxDataOffset getOffset(wchar_t const *text);
 };
 
 #endif /* FREETYPEGX_H_ */
