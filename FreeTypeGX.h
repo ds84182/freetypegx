@@ -121,7 +121,17 @@
  * \code
  * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"), (GXColor){0xff, 0xee, 0xaa, 0xff});
  * \endcode
- *
+ * * \n
+ * Currently style parameters are:
+ * \li <i>FTGX_JUSTIFY_LEFT</i>
+ * \li <i>FTGX_JUSTIFY_CENTER</i>
+ * \li <i>FTGX_JUSTIFY_RIGHT</i>
+ * \li <i>FTGX_ALIGN_TOP</i>
+ * \li <i>FTGX_ALIGN_MIDDLE</i>
+ * \li <i>FTGX_ALIGN_BOTTOM</i>
+ * \li <i>FTGX_STYLE_UNDERLINE</i>
+ * \li <i>FTGX_STYLE_STRIKE</i>
+ * 
  * \section sec_license License
  * 
  * FreeTypeGX is distributed under the GNU Lesser General Public License.
@@ -184,7 +194,6 @@ typedef struct ftgxDataOffset_ {
 #define FTGX_STYLE_UNDERLINE	0x0100
 #define FTGX_STYLE_STRIKE		0x0200
 
-
 const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color value used only to sanitize Doxygen documentation. */
 
 /*! \class FreeTypeGX
@@ -203,7 +212,7 @@ class FreeTypeGX {
 		FT_Face ftFace;			/**< FreeType reusable FT_Face typographic object. */
 		FT_GlyphSlot ftSlot;	/**< FreeType reusable FT_GlyphSlot glyph container object. */
 		FT_UInt ftPointSize;	/**< Requested size of the rendered font. */
-		bool ftKerningEnabled;	/**< Flag indicating the availability of font kerning. */
+		bool ftKerningEnabled;	/**< Flag indicating the availability of font kerning data. */
 		
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
 		uint8_t positionFormat;		/**< Defined position format of the texture. */
@@ -219,7 +228,7 @@ class FreeTypeGX {
 		uint16_t cacheAllGlyphData();
 		ftgxCharData *cacheGlyphData(wchar_t charCode);
 		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
-		static bool copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color);
+		static void copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color);
 		static void copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, int16_t screenX, int16_t screenY, GXColor color);
 		
 	public:
@@ -232,6 +241,7 @@ class FreeTypeGX {
 		static wchar_t* charToWideChar(char* p);
 		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
 		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
+		void drawTextFeature(uint16_t x, uint16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
 
 		uint16_t getWidth(wchar_t *text);
 		uint16_t getWidth(wchar_t const *text);
