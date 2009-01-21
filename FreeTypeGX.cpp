@@ -318,7 +318,8 @@ uint16_t FreeTypeGX::getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format
  * @param x	Screen X coordinate at which to output the text.
  * @param y Screen Y coordinate at which to output the text. Note that this value corresponds to the text string origin and not the top or bottom of the glyphs.
  * @param text	NULL terminated string to output.
- * @param color	Optional color to apply to the text characters. If not specified default value is (GXColor){0xff, 0xff, 0xff, 0xff}
+ * @param color	Optional color to apply to the text characters. If not specified default value is ftgxWhite: (GXColor){0xff, 0xff, 0xff, 0xff}
+ * @param textStyle	Flags which specify any styling which should be applied to the rendered string.
  * @return The number of characters printed.
  */
 uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color, uint16_t textStyle) {
@@ -364,7 +365,6 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 }
 
 /**
- * 
  * \overload
  */
 uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color, uint16_t textStyle) {
@@ -511,7 +511,7 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t const *text) {
  * @param screenY	The screen Y coordinate at which to output the rendered texture.
  * @param color	Color to apply to the texture.
  */
-void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color) {
+bool FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color) {
 
 	f32	f32TexWidth = texWidth,
 		f32TexHeight = texHeight;
@@ -584,7 +584,7 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionForm
  * @param screenY	The screen Y coordinate at which to output the quad.
  * @param color	Color to apply to the texture.
  */
-void FreeTypeGX::copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, uint16_t screenX, uint16_t screenY, GXColor color) {
+void FreeTypeGX::copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, int16_t screenX, int16_t screenY, GXColor color) {
 	f32	f32FeatureWidth = featureWidth,
 		f32FeatureHeight = featureHeight;
 
