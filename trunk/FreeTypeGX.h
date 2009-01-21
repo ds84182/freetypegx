@@ -183,8 +183,9 @@ typedef struct ftgxDataOffset_ {
 
 #define FTGX_STYLE_UNDERLINE	0x0100
 #define FTGX_STYLE_STRIKE		0x0200
-#define FTGX_STYLE_BOLD			0x0400
-#define FTGX_STYLE_ITALICS		0x0800
+
+
+const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color value used only to sanitize Doxygen documentation. */
 
 /*! \class FreeTypeGX
  * \brief Wrapper class for the libFreeType library with GX rendering.
@@ -218,8 +219,8 @@ class FreeTypeGX {
 		uint16_t cacheAllGlyphData();
 		ftgxCharData *cacheGlyphData(wchar_t charCode);
 		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
-		static void copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, uint16_t screenX, uint16_t screenY, GXColor color);
-		static void copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, uint16_t screenX, uint16_t screenY, GXColor color);
+		static bool copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color);
+		static void copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, int16_t screenX, int16_t screenY, GXColor color);
 		
 	public:
 		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
@@ -229,8 +230,8 @@ class FreeTypeGX {
 		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 
 		static wchar_t* charToWideChar(char* p);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = (GXColor){0xff, 0xff, 0xff, 0xff}, uint16_t textStyling = 0);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = (GXColor){0xff, 0xff, 0xff, 0xff}, uint16_t textStyling = 0);
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
 
 		uint16_t getWidth(wchar_t *text);
 		uint16_t getWidth(wchar_t const *text);
