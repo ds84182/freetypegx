@@ -104,7 +104,7 @@
  * \li <i>GX_POS_XYZ</i>
  * 
  * \n
- * -# Using the allocated FreeTypeGX instance object call the loadFont function to load the font from the compiled buffer and specify the desired point size:
+ * -# Using the allocated FreeTypeGX instance object call the loadFont function to load the font from the compiled buffer and specify the desired point size. Note that this function can be called multiple times to load a new:
  * \code
  * fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64);
  * \endcode
@@ -119,9 +119,16 @@
  * \endcode
  * Alternately you can specify a <i>GXColor</i> object you would like to apply to the printed characters:
  * \code
- * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"), (GXColor){0xff, 0xee, 0xaa, 0xff});
+ * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"),
+ *                      (GXColor){0xff, 0xee, 0xaa, 0xff});
  * \endcode
- * * \n
+ * Furthermore you can also specify a group of styling parameters which will modify the positioning or style of the text:
+ * \code
+ * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"),
+ *                      (GXColor){0xff, 0xee, 0xaa, 0xff},
+ *                      FTGX_JUSTIFY_CENTER | FTGX_ALIGN_BOTTOM | FTGX_STYLE_UNDERLINE);
+ * \endcode
+ * \n
  * Currently style parameters are:
  * \li <i>FTGX_JUSTIFY_LEFT</i>
  * \li <i>FTGX_JUSTIFY_CENTER</i>
@@ -183,6 +190,7 @@ typedef struct ftgxDataOffset_ {
 
 #define _TEXT(t) L ## t /**< Unicode helper macro. */
 
+#define FTGX_NULL				0x0000
 #define FTGX_JUSTIFY_LEFT		0x0001
 #define FTGX_JUSTIFY_CENTER		0x0002
 #define FTGX_JUSTIFY_RIGHT		0x0004
@@ -224,24 +232,26 @@ class FreeTypeGX {
 		static uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
 		static uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
 
-		void clearFontData();
-		uint16_t cacheAllGlyphData();
-		ftgxCharData *cacheGlyphData(wchar_t charCode);
-		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
 		static void copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color);
 		static void copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, int16_t screenX, int16_t screenY, GXColor color);
+
+		void unloadFont();
+		ftgxCharData *cacheGlyphData(wchar_t charCode);
+		uint16_t cacheGlyphDataComplete();
+		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
+		void drawTextFeature(uint16_t x, uint16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
 		
 	public:
 		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t positionFormat = GX_POS_XYZ);
 		~FreeTypeGX();
 
+		static wchar_t* charToWideChar(char* p);
+
 		uint16_t loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
-
-		static wchar_t* charToWideChar(char* p);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
-		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = 0);
-		void drawTextFeature(uint16_t x, uint16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
+		
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
+		uint16_t drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
 
 		uint16_t getWidth(wchar_t *text);
 		uint16_t getWidth(wchar_t const *text);

@@ -38,21 +38,29 @@ FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t positionFormat) {
  * Default destructor for the FreeTypeGX class.
  */
 FreeTypeGX::~FreeTypeGX() {
-	this->clearFontData();
+	this->unloadFont();
 }
 
 /**
- * Clears all loaded font glyph data.
+ * Convert a short char sctring to a wide char string.
  * 
- * This routine clears all members of the font map structure and frees all allocated memory back to the system.
+ * This routine converts a supplied shot character string into a wide character string.
+ * Note that it is the user's responsibility to clear the returned buffer once it is no longer needed.
+ * 
+ * @param strChar	Character string to be converted.
+ * @return Wide character representation of supplied character string.
  */
-void FreeTypeGX::clearFontData() {
-	for( std::map<wchar_t, ftgxCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
-		free(i->second.glyphDataTexture);
-	}
-	
-	this->fontData.clear();
+wchar_t* FreeTypeGX::charToWideChar(char* strChar) {
+      wchar_t *strWChar;
+      strWChar = new wchar_t[strlen(strChar) + 1];
+
+      char *tempSrc = strChar;
+      wchar_t *tempDest = strWChar;
+      while((*tempDest++ = *tempSrc++));
+
+      return strWChar;
 }
+
 /**
  * Loads and processes a specified true type font buffer to a specific point size.
  * 
@@ -64,7 +72,7 @@ void FreeTypeGX::clearFontData() {
  * @param cacheAll	Optional flag to specify if all font characters should be cached when the class object is created. If specified as false the characters only become cached the first time they are used. If not specified default value is false.
  */
 uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll) {
-	this->clearFontData();
+	this->unloadFont();
 	this->ftPointSize = pointSize;
 	
 	FT_New_Memory_Face(this->ftLibrary, (FT_Byte *)fontBuffer, bufferSize, 0, &this->ftFace);
@@ -74,7 +82,7 @@ uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt p
 	this->ftKerningEnabled = FT_HAS_KERNING(this->ftFace);
 	
 	if (cacheAll) {
-		return this->cacheAllGlyphData();
+		return this->cacheGlyphDataComplete();
 	}
 	
 	return 0;
@@ -86,6 +94,19 @@ uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt p
  */
 uint16_t FreeTypeGX::loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll) {
 	return this->loadFont((uint8_t *)fontBuffer, bufferSize, pointSize, cacheAll);
+}
+
+/**
+ * Clears all loaded font glyph data.
+ * 
+ * This routine clears all members of the font map structure and frees all allocated memory back to the system.
+ */
+void FreeTypeGX::unloadFont() {
+	for( std::map<wchar_t, ftgxCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
+		free(i->second.glyphDataTexture);
+	}
+	
+	this->fontData.clear();
 }
 
 /**
@@ -151,28 +172,6 @@ uint16_t FreeTypeGX::adjustTextureHeight(uint16_t textureHeight, uint8_t texture
 }
 
 /**
- * Locates each character in this wrapper's configured font face and proccess them.
- *
- * This routine locates each character in the configured font face and renders the glyph's bitmap.
- * Each bitmap and relevant information is loaded into its own quickly addressible structure within an instance-specific map.
- */
-uint16_t FreeTypeGX::cacheAllGlyphData() {
-	uint16_t i = 0;
-	FT_UInt gIndex;
-	FT_ULong charCode = FT_Get_First_Char( this->ftFace, &gIndex );
-	while ( gIndex != 0 ) {
-
-		if(this->cacheGlyphData(charCode) != NULL) {
-			i++;
-		}
-
-		charCode = FT_Get_Next_Char( this->ftFace, charCode, &gIndex );
-	}
-	
-	return i;
-}
-
-/**
  * Caches the given font glyph in the instance font texture buffer.
  *
  * This routine renders and stores the requested glyph's bitmap and relevant information into its own quickly addressible
@@ -213,6 +212,28 @@ ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode) {
 	}
 
 	return NULL;
+}
+
+/**
+ * Locates each character in this wrapper's configured font face and proccess them.
+ *
+ * This routine locates each character in the configured font face and renders the glyph's bitmap.
+ * Each bitmap and relevant information is loaded into its own quickly addressible structure within an instance-specific map.
+ */
+uint16_t FreeTypeGX::cacheGlyphDataComplete() {
+	uint16_t i = 0;
+	FT_UInt gIndex;
+	FT_ULong charCode = FT_Get_First_Char( this->ftFace, &gIndex );
+	while ( gIndex != 0 ) {
+
+		if(this->cacheGlyphData(charCode) != NULL) {
+			i++;
+		}
+
+		charCode = FT_Get_Next_Char( this->ftFace, charCode, &gIndex );
+	}
+	
+	return i;
 }
 
 /**
@@ -411,25 +432,6 @@ void FreeTypeGX::drawTextFeature(uint16_t x, uint16_t y, uint16_t width,  ftgxDa
 				break;
 		}
 	}
-}
-
-/**
- * Convert a short char sctring to a wide char string.
- * 
- * This routine converts a supplied shot character string into a wide character string.
- * 
- * @param strChar	Character string to be converted.
- * @return Wide character representation of supplied character string.
- */
-wchar_t* FreeTypeGX::charToWideChar(char* strChar) {
-      wchar_t *strWChar;
-      strWChar = new wchar_t[strlen(strChar) + 1];
-
-      char *tempSrc = strChar;
-      wchar_t *tempDest = strWChar;
-      while((*tempDest++ = *tempSrc++));
-
-      return strWChar;
 }
 
 /**

@@ -6,7 +6,7 @@ Version 0.2.3
 - Addition of underline and strikethrough text styling.
 - Addition of kerning support.
 - Fixed display issues when font characters drifted into negative coordinate territory.
-
+- Relevant documentation update.
 
 -------------
 Version 0.2.2
