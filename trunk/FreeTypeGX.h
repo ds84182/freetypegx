@@ -101,13 +101,17 @@
  * \n
  * -# Using the allocated FreeTypeGX instance object call the loadFont function to load the font from the compiled buffer and specify the desired point size. Note that this function can be called multiple times to load a new:
  * \code
- * fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64);
+ * freeTypeGX->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64);
  * \endcode
  * Alternately you can specify a flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
  * \code
- * fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64, true);
+ * freeTypeGX->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64, true);
  * \endcode
  * \n
+ * -# If necessary you can enable compatibility modes with concurrent libraries or systems. For more information on this feature see the documentation for setCompatibilityMode:
+ * \code
+ * freeTypeGX->setCompatibilityMode(FTGX_COMPATIBILITY_GRRLIB);
+ * \endcode
  * -# Using the allocated FreeTypeGX instance object call the drawText function to print a string at the specified screen X and Y coordinates to the current EFB:
  * \code
  * freeTypeGX->drawText(10, 25, _TEXT("FreeTypeGX Rocks!"));
@@ -208,6 +212,7 @@ typedef struct ftgxDataOffset_ {
 #define FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_INDEX8	0X0400
 #define FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_INDEX16	0X0800
 
+#define FTGX_COMPATIBILITY_NONE							0x0000
 #define FTGX_COMPATIBILITY_GRRLIB						FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_PASSCLR | FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_NONE
 #define FTGX_COMPATIBILITY_LIBWIISPRITE					FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_MODULATE | FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_DIRECT
 
@@ -216,7 +221,7 @@ const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color
 /*! \class FreeTypeGX
  * \brief Wrapper class for the libFreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.2.3
+ * \version 0.2.4
  * 
  * FreeTypeGX acts as a wrapper class for the libFreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -249,9 +254,9 @@ class FreeTypeGX {
 
 		void setDefaultMode();
 
-		void drawTextFeature(int16_t x, int16_t y, int16_t z, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
-		void copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 texHeight, int16_t screenX, int16_t screenY, int16_t screenZ, GXColor color);
-		void copyFeatureToFramebuffer(f32 featureWidth, f32 featureHeight, int16_t screenX, int16_t screenY, int16_t screenZ, GXColor color);
+		void drawTextFeature(int16_t x, int16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
+		void copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 texHeight, int16_t screenX, int16_t screenY, GXColor color);
+		void copyFeatureToFramebuffer(f32 featureWidth, f32 featureHeight, int16_t screenX, int16_t screenY,  GXColor color);
 		
 	public:
 		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t vertexIndex = GX_VTXFMT1);
@@ -264,9 +269,7 @@ class FreeTypeGX {
 		uint16_t loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 		
-		uint16_t drawText(int16_t x, int16_t y, int16_t z, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
 		uint16_t drawText(int16_t x, int16_t y, wchar_t *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
-		uint16_t drawText(int16_t x, int16_t y, int16_t z, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
 		uint16_t drawText(int16_t x, int16_t y, wchar_t const *text, GXColor color = ftgxWhite, uint16_t textStyling = FTGX_NULL);
 
 		uint16_t getWidth(wchar_t *text);
