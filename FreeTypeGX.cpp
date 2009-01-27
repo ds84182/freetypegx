@@ -25,13 +25,13 @@
  * Default constructor for the FreeTypeGX class.
  * 
  * @param textureFormat	Optional format (GX_TF_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_TF_RGBA8.
- * @param positionFormat	Optional positional format (GX_POS_*) of the texture as defined by the libogc gx.h header file. If not specified default value is GX_POS_XYZ.
+ * @param vertexIndex	Optional vertex format index (GX_VTXFMT*) of the glyph textures as defined by the libogc gx.h header file. If not specified default value is GX_VTXFMT1.
  */ 
-FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t positionFormat) {
+FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t vertexIndex) {
 	FT_Init_FreeType(&this->ftLibrary);
 
 	this->textureFormat = textureFormat;
-	this->positionFormat = positionFormat;
+	this->setVertexFormat(vertexIndex);
 }
 
 /**
@@ -61,6 +61,67 @@ wchar_t* FreeTypeGX::charToWideChar(char* strChar) {
       return strWChar;
 }
 
+/**
+ * Setup the vertex attribute formats for the glyph textures.
+ * 
+ * This function sets up the vertex format for the glyph texture o nthe specified vertex format index.
+ * Note that this function should not need to be called except if the vertex formats are cleared or the specified
+ * vertex format index is modified. 
+ * 
+ * @param vertexIndex	Vertex format index (GX_VTXFMT*) of the glyph textures as defined by the libogc gx.h header file.
+*/
+void FreeTypeGX::setVertexFormat(uint8_t vertexIndex) {
+	this->vertexIndex = vertexIndex;
+	
+	GX_SetVtxAttrFmt(this->vertexIndex, GX_VA_POS, GX_POS_XYZ, GX_S16, 0);
+	GX_SetVtxAttrFmt(this->vertexIndex, GX_VA_TEX0, GX_TEX_ST, GX_F32, 0);
+	GX_SetVtxAttrFmt(this->vertexIndex, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+}
+
+void FreeTypeGX::setCompatibilityMode(uint32_t compatibilityMode) {
+	this->compatibilityMode = compatibilityMode;
+}
+
+void FreeTypeGX::setDefaultMode() {
+	if(this->compatibilityMode) {
+		switch(this->compatibilityMode & 0x00FF) {
+			case FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_MODULATE:
+				GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_DECAL:
+				GX_SetTevOp (GX_TEVSTAGE0, GX_DECAL);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_BLEND:
+				GX_SetTevOp (GX_TEVSTAGE0, GX_BLEND);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_REPLACE:
+				GX_SetTevOp (GX_TEVSTAGE0, GX_REPLACE);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_PASSCLR:
+				GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
+				break;
+			default:
+				break;
+		}
+		
+		switch(this->compatibilityMode & 0xFF00) {
+			case FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_NONE:
+				GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_DIRECT:
+				GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_INDEX8:
+				GX_SetVtxDesc (GX_VA_TEX0, GX_INDEX8);
+				break;
+			case FTGX_COMPATIBILITY_DEFAULT_VTXDESC_GX_INDEX16:
+				GX_SetVtxDesc (GX_VA_TEX0, GX_INDEX16);
+				break;
+			default:
+				break;
+		}
+	}
+}
 /**
  * Loads and processes a specified true type font buffer to a specific point size.
  * 
@@ -190,7 +251,6 @@ ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode) {
 		
 		if(this->ftSlot->format == FT_GLYPH_FORMAT_BITMAP) {
 			FT_Bitmap *glyphBitmap = &this->ftSlot->bitmap;
-			//FT_Bitmap_Embolden(this->ftLibrary, glyphBitmap, 8, 8);
 			
 			textureWidth = adjustTextureWidth(glyphBitmap->width, this->textureFormat);
 			textureHeight = adjustTextureHeight(glyphBitmap->rows, this->textureFormat);
@@ -281,7 +341,7 @@ void FreeTypeGX::loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData) {
 			charData->glyphDataTexture = Metaphrasis::convertBufferToRGBA8(glyphData, charData->textureWidth, charData->textureHeight);
 			break;
 	}
-	
+
 	free(glyphData);
 }
 
@@ -338,12 +398,13 @@ uint16_t FreeTypeGX::getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format
  * 
  * @param x	Screen X coordinate at which to output the text.
  * @param y Screen Y coordinate at which to output the text. Note that this value corresponds to the text string origin and not the top or bottom of the glyphs.
+ * @param z	Screen Z coordinate at which to output the text.
  * @param text	NULL terminated string to output.
  * @param color	Optional color to apply to the text characters. If not specified default value is ftgxWhite: (GXColor){0xff, 0xff, 0xff, 0xff}
  * @param textStyle	Flags which specify any styling which should be applied to the rendered string.
  * @return The number of characters printed.
  */
-uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor color, uint16_t textStyle) {
+uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, int16_t z, wchar_t *text, GXColor color, uint16_t textStyle) {
 	uint16_t strLength = wcslen(text);
 	uint16_t x_pos = x, printed = 0;
 	uint16_t x_offset = 0, y_offset = 0;
@@ -375,7 +436,7 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 			}
 
 			GX_InitTexObj(&glyphTexture, glyphData->glyphDataTexture, glyphData->textureWidth, glyphData->textureHeight, this->textureFormat, GX_CLAMP, GX_CLAMP, GX_FALSE);
-			this->copyTextureToFramebuffer(&glyphTexture, this->positionFormat, glyphData->textureWidth, glyphData->textureHeight, x_pos - x_offset, y - glyphData->renderOffsetY - y_offset, color);
+			this->copyTextureToFramebuffer(&glyphTexture, glyphData->textureWidth, glyphData->textureHeight, x_pos - x_offset, y - glyphData->renderOffsetY - y_offset, z, color);
 
 			x_pos += glyphData->glyphAdvanceX;
 			printed++;
@@ -383,35 +444,49 @@ uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t *text, GXColor col
 	}
 	
 	if(textStyle & 0x0F00) {
-		this->drawTextFeature(x - x_offset, y, this->getWidth(text), this->getOffset(text), textStyle, color);
+		this->drawTextFeature(x - x_offset, y, z, this->getWidth(text), this->getOffset(text), textStyle, color);
 	}
-	
+
 	return printed;
 }
 
 /**
  * \overload
  */
-uint16_t FreeTypeGX::drawText(uint16_t x, uint16_t y, wchar_t const *text, GXColor color, uint16_t textStyle) {
-	return this->drawText(x, y, (wchar_t *)text, color, textStyle);
+uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color, uint16_t textStyle) {
+	return this->drawText(x, y, 0, text, color, textStyle);
 }
 
-void FreeTypeGX::drawTextFeature(uint16_t x, uint16_t y, uint16_t width,  ftgxDataOffset offsetData, uint16_t format, GXColor color) {
+/**
+ * \overload
+ */
+uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, int16_t z, wchar_t const *text, GXColor color, uint16_t textStyle) {
+	return this->drawText(x, y, z, (wchar_t *)text, color, textStyle);
+}
+
+/**
+ * \overload
+ */
+uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t const *text, GXColor color, uint16_t textStyle) {
+	return this->drawText(x, y, 0, (wchar_t *)text, color, textStyle);
+}
+
+void FreeTypeGX::drawTextFeature(int16_t x, int16_t y, int16_t z, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color) {
 	uint16_t featureHeight = this->ftPointSize >> 4 > 0 ? this->ftPointSize >> 4 : 1;
 	
 	if (format & FTGX_STYLE_UNDERLINE ) {
 		switch(format & 0x00F0) {
 			case FTGX_ALIGN_TOP:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + offsetData.max + 1, color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y + offsetData.max + 1, z, color);
 				break;
 			case FTGX_ALIGN_MIDDLE:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + ((offsetData.max - offsetData.min) >> 1) + 1, color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y + ((offsetData.max - offsetData.min) >> 1) + 1, z, color);
 				break;
 			case FTGX_ALIGN_BOTTOM:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - offsetData.min, color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y - offsetData.min, z, color);
 				break;
 			default:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + 1, color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y + 1, z, color);
 				break;
 		}
 	}
@@ -419,16 +494,16 @@ void FreeTypeGX::drawTextFeature(uint16_t x, uint16_t y, uint16_t width,  ftgxDa
 	if (format & FTGX_STYLE_STRIKE ) {
 		switch(format & 0x00F0) {
 			case FTGX_ALIGN_TOP:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y + ((offsetData.max + offsetData.min) >> 1), color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y + ((offsetData.max + offsetData.min) >> 1), z, color);
 				break;
 			case FTGX_ALIGN_MIDDLE:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y, color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y, z, color);
 				break;
 			case FTGX_ALIGN_BOTTOM:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - ((offsetData.max + offsetData.min) >> 1), color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y - ((offsetData.max + offsetData.min) >> 1), z, color);
 				break;
 			default:
-				this->copyFeatureToFramebuffer(this->positionFormat, width, featureHeight, x, y - ((offsetData.max - offsetData.min) >> 1), color);
+				this->copyFeatureToFramebuffer(width, featureHeight, x, y - ((offsetData.max - offsetData.min) >> 1), z, color);
 				break;
 		}
 	}
@@ -548,121 +623,66 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t const *text) {
  * This routine uses the in-built GX quad builder functions to define the texture bounds and location on the EFB target.
  * 
  * @param texObj	A pointer to the glyph's initialized texture object.
- * @param positionFormat	The positional format of the graphics subsystem.
  * @param texWidth	The pixel width of the texture object.
  * @param texHeight	The pixel height of the texture object.
  * @param screenX	The screen X coordinate at which to output the rendered texture.
  * @param screenY	The screen Y coordinate at which to output the rendered texture.
+ * @param screenZ	The screen Z coordinate at which to output the rendered texture.
  * @param color	Color to apply to the texture.
  */
-void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, uint8_t positionFormat, uint16_t texWidth, uint16_t texHeight, int16_t screenX, int16_t screenY, GXColor color) {
-
-	f32	f32TexWidth = texWidth,
-		f32TexHeight = texHeight;
-
-//	Mtx model;
-//	guMtxIdentity(model);
-//	guMtxTransApply(model, model, screenX, screenY, 0.0f);
-//	GX_LoadPosMtxImm(model, GX_PNMTX0);
+void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 texHeight, int16_t screenX, int16_t screenY, int16_t screenZ, GXColor color) {
 
 	GX_LoadTexObj(texObj, GX_TEXMAP0);
 
 	GX_SetTevOp (GX_TEVSTAGE0, GX_MODULATE);
-  	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
-  	
-	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-  	switch(positionFormat) {
-	  	case GX_POS_XY:
-			GX_Position2f32(screenX, screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	 		GX_TexCoord2f32(0.0f, 0.0f);
-	
-	 		GX_Position2f32(f32TexWidth + screenX, screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(1.0f, 0.0f);
-	
-			GX_Position2f32(f32TexWidth + screenX, f32TexHeight + screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(1.0f, 1.0f);
-	
-			GX_Position2f32(screenX, f32TexHeight + screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(0.0f, 1.0f);
-			break;
+	GX_SetVtxDesc (GX_VA_TEX0, GX_DIRECT);
 
-	  	case GX_POS_XYZ:
-			GX_Position3f32(screenX, screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	 		GX_TexCoord2f32(0.0f, 0.0f);
-	
-	 		GX_Position3f32(f32TexWidth + screenX, screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(1.0f, 0.0f);
-	
-			GX_Position3f32(f32TexWidth + screenX, f32TexHeight + screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(1.0f, 1.0f);
-	
-			GX_Position3f32(screenX, f32TexHeight + screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			GX_TexCoord2f32(0.0f, 1.0f);
-			break;
-	  	default:
-	  		break;
-  	}
+	GX_Begin(GX_QUADS, this->vertexIndex, 4);
+		GX_Position3s16(screenX, screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+		GX_TexCoord2f32(0.0f, 0.0f);
+		
+		GX_Position3s16(texWidth + screenX, screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+		GX_TexCoord2f32(1.0f, 0.0f);
+		
+		GX_Position3s16(texWidth + screenX, texHeight + screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+		GX_TexCoord2f32(1.0f, 1.0f);
+		
+		GX_Position3s16(screenX, texHeight + screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+		GX_TexCoord2f32(0.0f, 1.0f);
 	GX_End();
 
-	GX_SetTevOp (GX_TEVSTAGE0, GX_PASSCLR);
-  	GX_SetVtxDesc (GX_VA_TEX0, GX_NONE);
+	this->setDefaultMode();
 }
 
 /**
  * Creates a feature quad to the EFB. 
  * 
- * 
+ * This function creates a simple quad for displaying underline or strikeout text styling.
  *
- * @param positionFormat	The positional format of the graphics subsystem.
  * @param featureWidth	The pixel width of the quad.
  * @param featureHeight	The pixel height of the quad.
  * @param screenX	The screen X coordinate at which to output the quad.
  * @param screenY	The screen Y coordinate at which to output the quad.
+ * @param screenZ	The screen Z coordinate at which to output the quad.
  * @param color	Color to apply to the texture.
  */
-void FreeTypeGX::copyFeatureToFramebuffer(uint8_t positionFormat, uint16_t featureWidth, uint16_t featureHeight, int16_t screenX, int16_t screenY, GXColor color) {
-	f32	f32FeatureWidth = featureWidth,
-		f32FeatureHeight = featureHeight;
+void FreeTypeGX::copyFeatureToFramebuffer(f32 featureWidth, f32 featureHeight, int16_t screenX, int16_t screenY, int16_t screenZ, GXColor color) {
 
-	GX_Begin(GX_QUADS, GX_VTXFMT0, 4);
-  	switch(positionFormat) {
-	  	case GX_POS_XY:
-			GX_Position2f32(screenX, screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-	 		GX_Position2f32(f32FeatureWidth + screenX, screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-			GX_Position2f32(f32FeatureWidth + screenX, f32FeatureHeight + screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-			GX_Position2f32(screenX, f32FeatureHeight + screenY);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			break;
+	GX_Begin(GX_QUADS, this->vertexIndex, 4);
+		GX_Position3s16(screenX, screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
 
-	  	case GX_POS_XYZ:
-			GX_Position3f32(screenX, screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-	 		GX_Position3f32(f32FeatureWidth + screenX, screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-			GX_Position3f32(f32FeatureWidth + screenX, f32FeatureHeight + screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-	
-			GX_Position3f32(screenX, f32FeatureHeight + screenY, 0);
-			GX_Color4u8(color.r, color.g, color.b, color.a);
-			break;
-	  	default:
-	  		break;
-  	}
+ 		GX_Position3s16(featureWidth + screenX, screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+
+		GX_Position3s16(featureWidth + screenX, featureHeight + screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
+
+		GX_Position3s16(screenX, featureHeight + screenY, screenZ);
+		GX_Color4u8(color.r, color.g, color.b, color.a);
 	GX_End();
 }
