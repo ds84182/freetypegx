@@ -63,6 +63,14 @@ wchar_t* FreeTypeGX::charToWideChar(char* strChar) {
 }
 
 /**
+ * 
+ * \overload
+ */
+wchar_t* FreeTypeGX::charToWideChar(const char* strChar) {
+      return FreeTypeGX::charToWideChar((char*) strChar);
+}
+
+/**
  * Setup the vertex attribute formats for the glyph textures.
  * 
  * This function sets up the vertex format for the glyph texture on the specified vertex format index.
@@ -181,6 +189,9 @@ uint16_t FreeTypeGX::loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_
  * This routine clears all members of the font map structure and frees all allocated memory back to the system.
  */
 void FreeTypeGX::unloadFont() {
+	GX_DrawDone();
+	GX_Flush();
+	
 	for( std::map<wchar_t, ftgxCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
 		free(i->second.glyphDataTexture);
 	}
