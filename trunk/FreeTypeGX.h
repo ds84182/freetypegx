@@ -263,6 +263,7 @@ class FreeTypeGX {
 		~FreeTypeGX();
 
 		static wchar_t* charToWideChar(char* p);
+		static wchar_t* charToWideChar(const char* p);
 		void setVertexFormat(uint8_t vertexIndex);
 		void setCompatibilityMode(uint32_t compatibilityMode);
 
