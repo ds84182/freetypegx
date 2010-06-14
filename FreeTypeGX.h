@@ -31,7 +31,7 @@
  * 
  * \section sec_installation_source Installation (Source Code)
  * 
- * -# Ensure that you have the <a href = "http://www.tehskeen.com/forums/showthread.php?t=9404">libFreeType</a> Wii library installed in your development environment with the library added to your Makefile where appropriate.
+ * -# Ensure that you have the <a href = "http://sourceforge.net/projects/devkitpro/files/portlibs/">FreeType</a> Wii library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Ensure that you have the <a href = "http://code.google.com/p/metaphrasis">Metaphrasis</a> library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Extract the FreeTypeGX archive.
  * -# Copy the contents of the <i>src</i> directory into your project's development path.
@@ -42,7 +42,7 @@
  * 
  * \section sec_installation_library Installation (Library)
  * 
- * -# Ensure that you have the <a href = "http://www.tehskeen.com/forums/showthread.php?t=9404">libFreeType</a> Wii library installed in your development environment with the library added to your Makefile where appropriate.
+ * -# Ensure that you have the <a href = "http://sourceforge.net/projects/devkitpro/files/portlibs/">FreeType</a> Wii library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Ensure that you have the <a href = "http://code.google.com/p/metaphrasis">Metaphrasis</a> library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Extract the FreeTypeGX archive.
  * -# Copy the contents of the <i>lib</i> directory into your <i>devKitPro/libogc</i> directory.
@@ -103,7 +103,7 @@
  * \code
  * freeTypeGX->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64);
  * \endcode
- * Alternately you can specify a flag which will load and cache all available font glyphs immidiately. Note that on large font sets enabling this feature could take a significant amount of time. 
+ * Alternately you can specify a flag which will load and cache all available font glyphs immediately. Note that on large font sets enabling this feature could take a significant amount of time.
  * \code
  * freeTypeGX->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, 64, true);
  * \endcode
@@ -158,6 +158,7 @@
 
 #include <malloc.h>
 #include <string.h>
+#include <wchar.h>
 #include <map>
 
 /*! \struct ftgxCharData_
@@ -166,7 +167,7 @@
  */
 typedef struct ftgxCharData_ {
 	uint16_t glyphAdvanceX;	/**< Character glyph X coordinate advance in pixels. */
-	uint16_t glyphIndex;	/**< Charachter glyph index in the font face. */
+	uint16_t glyphIndex;	/**< Character glyph index in the font face. */
 
 	uint16_t textureWidth;	/**< Texture width in pixels/bytes. */
 	uint16_t textureHeight;	/**< Texture glyph height in pixels/bytes. */
@@ -219,25 +220,25 @@ typedef struct ftgxDataOffset_ {
 const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color value used only to sanitize Doxygen documentation. */
 
 /*! \class FreeTypeGX
- * \brief Wrapper class for the libFreeType library with GX rendering.
+ * \brief Wrapper class for the FreeType library with GX rendering.
  * \author Armin Tamzarian
  * \version 0.2.4
  * 
- * FreeTypeGX acts as a wrapper class for the libFreeType library. It supports precaching of transformed glyph data into
+ * FreeTypeGX acts as a wrapper class for the FreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
  * GX texture functions resulting in high throughput of string rendering.  
  */
 class FreeTypeGX {
 
 	private:
-		FT_Library ftLibrary;	/**< FreeType FT_Library instance. */
-		FT_Face ftFace;			/**< FreeType reusable FT_Face typographic object. */
-		FT_GlyphSlot ftSlot;	/**< FreeType reusable FT_GlyphSlot glyph container object. */
-		FT_UInt ftPointSize;	/**< Requested size of the rendered font. */
-		bool ftKerningEnabled;	/**< Flag indicating the availability of font kerning data. */
+		FT_Library ftLibrary;		/**< FreeType FT_Library instance. */
+		FT_Byte * ftFontBuffer;		/**< Pointer to the current font buffer */
+		FT_Long ftFontBufferSize;	/**< Size of the current font buffer */
+		FT_UInt ftPointSize;		/**< Requested size of the rendered font. */
+		bool ftKerningEnabled;		/**< Flag indicating the availability of font kerning data. */
 		
-		uint8_t textureFormat;	/**< Defined texture format of the target EFB. */
-		uint8_t vertexIndex;	/**< Vertex format descriptor index. */	
+		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
+		uint8_t vertexIndex;		/**< Vertex format descriptor index. */
 		uint32_t compatibilityMode;	/**< Compatibility mode for default tev operations and vertex descriptors. */	
 		std::map<wchar_t, ftgxCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
 
@@ -248,8 +249,8 @@ class FreeTypeGX {
 		static uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
 
 		void unloadFont();
-		ftgxCharData *cacheGlyphData(wchar_t charCode);
-		uint16_t cacheGlyphDataComplete();
+		ftgxCharData *cacheGlyphData(FT_Face ftFace, wchar_t charCode);
+		uint16_t cacheGlyphDataComplete(FT_Face ftFace);
 		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
 
 		void setDefaultMode();
