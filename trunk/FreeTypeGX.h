@@ -133,7 +133,6 @@
  * \li <i>FTGX_JUSTIFY_CENTER</i>
  * \li <i>FTGX_JUSTIFY_RIGHT</i>
  * \li <i>FTGX_ALIGN_TOP</i>
- * \li <i>FTGX_ALIGN_MIDDLE</i>
  * \li <i>FTGX_ALIGN_BOTTOM</i>
  * \li <i>FTGX_STYLE_UNDERLINE</i>
  * \li <i>FTGX_STYLE_STRIKE</i>
@@ -200,7 +199,7 @@ typedef struct ftgxDataOffset_ {
 #define FTGX_ALIGN_BOTTOM		0x0040
 
 #define FTGX_STYLE_UNDERLINE	0x0100
-#define FTGX_STYLE_STRIKE		0x0200
+#define FTGX_STYLE_STRIKE		0x0200 /**< Deprecated */
 
 #define FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_MODULATE	0X0001
 #define FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_DECAL		0X0002
@@ -235,6 +234,9 @@ class FreeTypeGX {
 		FT_Byte * ftFontBuffer;		/**< Pointer to the current font buffer */
 		FT_Long ftFontBufferSize;	/**< Size of the current font buffer */
 		FT_UInt ftPointSize;		/**< Requested size of the rendered font. */
+		FT_Short ftAscender;		/**< Ascender value of the rendered font. */
+		FT_Short ftDescender;		/**< Descender value of the rendered font. */
+
 		bool ftKerningEnabled;		/**< Flag indicating the availability of font kerning data. */
 		
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
@@ -245,8 +247,8 @@ class FreeTypeGX {
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
 		static uint16_t adjustTextureHeight(uint16_t textureHeight, uint8_t textureFormat);
 
-		static uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
-		static uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
+		uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
+		uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
 
 		void unloadFont();
 		ftgxCharData *cacheGlyphData(FT_Face ftFace, wchar_t charCode);
