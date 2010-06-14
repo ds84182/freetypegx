@@ -5,6 +5,8 @@ Version 0.2.4
 - Compatibility with libwiisprite and support for other external code through setCompatibilityMode.
 - Fixed inability to change font size.
   Fixed (#10): http://code.google.com/p/freetypegx/issues/detail?id=10
+- Fixed middle vertical alignment issue.
+  Fixed (#12): http://code.google.com/p/freetypegx/issues/detail?id=12
 - Documentation fix for updates to new devkitPro compiled FreeType library.
   Fixed (#15): http://code.google.com/p/freetypegx/issues/detail?id=15
 - Fixed a lot of documentation typos.

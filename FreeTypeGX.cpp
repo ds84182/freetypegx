@@ -173,7 +173,8 @@ uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt p
 	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
 
 	this->ftKerningEnabled = FT_HAS_KERNING(ftFace);
-	
+	this->ftAscender = this->ftPointSize * ftFace->ascender / ftFace->units_per_EM;
+	this->ftDescender = this->ftPointSize * ftFace->descender / ftFace->units_per_EM;
 
 	if (cacheAll) {
 		numCached = this->cacheGlyphDataComplete(ftFace);
@@ -416,13 +417,13 @@ uint16_t FreeTypeGX::getStyleOffsetWidth(uint16_t width, uint16_t format) {
  */
 uint16_t FreeTypeGX::getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format) {
 	if (format & FTGX_ALIGN_TOP ) {
-		return -offset.max;
+		return -this->ftAscender;
 	}
 	else if (format & FTGX_ALIGN_MIDDLE ) {
-		return -(offset.max - offset.min) >> 1;
+		return -(this->ftDescender + this->ftAscender) >> 1;
 	}
 	else if (format & FTGX_ALIGN_BOTTOM ) {
-		return offset.min;
+		return this->ftDescender;
 	}
 	
 	return 0;
@@ -482,7 +483,7 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 			printed++;
 
 			if(textStyle & 0x0F00) {
-				this->drawTextFeature(x - x_offset, y, this->getWidth(text), this->getOffset(text), textStyle, color);
+				this->drawTextFeature(x - x_offset, y - y_offset, this->getWidth(text), this->getOffset(text), textStyle, color);
 			}
 		}
 	}
@@ -505,37 +506,7 @@ void FreeTypeGX::drawTextFeature(int16_t x, int16_t y, uint16_t width, ftgxDataO
 	uint16_t featureHeight = this->ftPointSize >> 4 > 0 ? this->ftPointSize >> 4 : 1;
 	
 	if (format & FTGX_STYLE_UNDERLINE ) {
-		switch(format & 0x00F0) {
-			case FTGX_ALIGN_TOP:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y + offsetData.max + 1, color);
-				break;
-			case FTGX_ALIGN_MIDDLE:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y + ((offsetData.max - offsetData.min) >> 1) + 1, color);
-				break;
-			case FTGX_ALIGN_BOTTOM:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y - offsetData.min, color);
-				break;
-			default:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y + 1, color);
-				break;
-		}
-	}
-	
-	if (format & FTGX_STYLE_STRIKE ) {
-		switch(format & 0x00F0) {
-			case FTGX_ALIGN_TOP:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y + ((offsetData.max + offsetData.min) >> 1), color);
-				break;
-			case FTGX_ALIGN_MIDDLE:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y, color);
-				break;
-			case FTGX_ALIGN_BOTTOM:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y - ((offsetData.max + offsetData.min) >> 1), color);
-				break;
-			default:
-				this->copyFeatureToFramebuffer(width, featureHeight, x, y - ((offsetData.max - offsetData.min) >> 1), color);
-				break;
-		}
+		this->copyFeatureToFramebuffer(width, featureHeight, x, y + 1, color);
 	}
 }
 
@@ -700,7 +671,7 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 te
 /**
  * Creates a feature quad to the EFB. 
  * 
- * This function creates a simple quad for displaying underline or strikeout text styling.
+ * This function creates a simple quad for displaying stylized text.
  *
  * @param featureWidth	The pixel width of the quad.
  * @param featureHeight	The pixel height of the quad.
