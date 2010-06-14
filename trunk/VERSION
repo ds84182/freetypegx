@@ -3,6 +3,10 @@ Version 0.2.4
 -------------
 - Better compatibility with GRRLIB library.
 - Compatibility with libwiisprite and support for other external code through setCompatibilityMode.
+- Documentation fix for updates to new devkitPro compiled FreeType library.
+  Fixed (#15): http://code.google.com/p/freetypegx/issues/detail?id=15
+- Fixed a lot of documentation typos.
+- Fixed (#13): http://code.google.com/p/freetypegx/issues/detail?id=13
 
 -------------
 Version 0.2.3

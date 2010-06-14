@@ -40,10 +40,11 @@ FreeTypeGX::FreeTypeGX(uint8_t textureFormat, uint8_t vertexIndex) {
  */
 FreeTypeGX::~FreeTypeGX() {
 	this->unloadFont();
+	FT_Done_FreeType(this->ftLibrary);
 }
 
 /**
- * Convert a short char sctring to a wide char string.
+ * Convert a short char string to a wide char string.
  * 
  * This routine converts a supplied shot character string into a wide character string.
  * Note that it is the user's responsibility to clear the returned buffer once it is no longer needed.
@@ -90,12 +91,12 @@ void FreeTypeGX::setVertexFormat(uint8_t vertexIndex) {
 /**
  * Sets the TEV and VTX rendering compatibility requirements for the class.
  * 
- * This sets up the default TEV opertion and VTX descriptions rendering values for the class. This ensures that FreeTypeGX
- * can remain compatible with external liraries or project code. Certain external libraries or code by design or lack of
- * foresight assume that the TEV opertion and VTX descriptions values will remain constant or are always returned to a
+ * This sets up the default TEV operation and VTX descriptions rendering values for the class. This ensures that FreeTypeGX
+ * can remain compatible with external libraries or project code. Certain external libraries or code by design or lack of
+ * foresight assume that the TEV operation and VTX descriptions values will remain constant or are always returned to a
  * certain value. This will enable compatibility with those libraries and any other code which cannot or will not be changed.
  * 
- * @param compatibilityMode	Compatibility descritor (FTGX_COMPATIBILITY_*) as defined in FreeTypeGX.h
+ * @param compatibilityMode	Compatibility descriptor (FTGX_COMPATIBILITY_*) as defined in FreeTypeGX.h
 */
 void FreeTypeGX::setCompatibilityMode(uint32_t compatibilityMode) {
 	this->compatibilityMode = compatibilityMode;
@@ -159,20 +160,27 @@ void FreeTypeGX::setDefaultMode() {
  * @param cacheAll	Optional flag to specify if all font characters should be cached when the class object is created. If specified as false the characters only become cached the first time they are used. If not specified default value is false.
  */
 uint16_t FreeTypeGX::loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll) {
-	this->unloadFont();
-	this->ftPointSize = pointSize;
-	
-	FT_New_Memory_Face(this->ftLibrary, (FT_Byte *)fontBuffer, bufferSize, 0, &this->ftFace);
-	FT_Set_Pixel_Sizes(this->ftFace, 0, this->ftPointSize);
+	uint16_t numCached = 0;
 
-	this->ftSlot = this->ftFace->glyph;
-	this->ftKerningEnabled = FT_HAS_KERNING(this->ftFace);
+	this->unloadFont();
+	this->ftFontBuffer = (FT_Byte *)fontBuffer;
+	this->ftFontBufferSize = bufferSize;
+	this->ftPointSize = pointSize;
+
+	FT_Face ftFace;
+
+	FT_New_Memory_Face(this->ftLibrary, this->ftFontBuffer, this->ftFontBufferSize, 0, &ftFace);
+	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
+
+	this->ftKerningEnabled = FT_HAS_KERNING(ftFace);
 	
+
 	if (cacheAll) {
-		return this->cacheGlyphDataComplete();
+		numCached = this->cacheGlyphDataComplete(ftFace);
 	}
+	FT_Done_Face(ftFace);
 	
-	return 0;
+	return numCached;
 }
 
 /**
@@ -264,34 +272,35 @@ uint16_t FreeTypeGX::adjustTextureHeight(uint16_t textureHeight, uint8_t texture
 /**
  * Caches the given font glyph in the instance font texture buffer.
  *
- * This routine renders and stores the requested glyph's bitmap and relevant information into its own quickly addressible
+ * This routine renders and stores the requested glyph's bitmap and relevant information into its own quickly addressable
  * structure within an instance-specific map.
  * 
+ * @param ftFace	FreeType face object used to interface with the FreeType library.
  * @param charCode	The requested glyph's character code.
  * @return A pointer to the allocated font structure.
  */
-ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode) {
+ftgxCharData *FreeTypeGX::cacheGlyphData(FT_Face ftFace, wchar_t charCode) {
 	FT_UInt gIndex;
 	uint16_t textureWidth = 0, textureHeight = 0;
 
-	gIndex = FT_Get_Char_Index( this->ftFace, charCode );
-	if (!FT_Load_Glyph(this->ftFace, gIndex, FT_LOAD_DEFAULT )) {
-		FT_Render_Glyph( this->ftSlot, FT_RENDER_MODE_NORMAL );
+	gIndex = FT_Get_Char_Index( ftFace, charCode );
+	if (!FT_Load_Glyph(ftFace, gIndex, FT_LOAD_DEFAULT )) {
+		FT_Render_Glyph( ftFace->glyph, FT_RENDER_MODE_NORMAL );
 		
-		if(this->ftSlot->format == FT_GLYPH_FORMAT_BITMAP) {
-			FT_Bitmap *glyphBitmap = &this->ftSlot->bitmap;
+		if(ftFace->glyph->format == FT_GLYPH_FORMAT_BITMAP) {
+			FT_Bitmap *glyphBitmap = &(ftFace->glyph->bitmap);
 			
 			textureWidth = adjustTextureWidth(glyphBitmap->width, this->textureFormat);
 			textureHeight = adjustTextureHeight(glyphBitmap->rows, this->textureFormat);
 
 			this->fontData[charCode] = (ftgxCharData){
-				this->ftSlot->advance.x >> 6,
+				ftFace->glyph->advance.x >> 6,
 				gIndex,
 				textureWidth,
 				textureHeight,
-				this->ftSlot->bitmap_top,
-				this->ftSlot->bitmap_top,
-				textureHeight - this->ftSlot->bitmap_top,
+				ftFace->glyph->bitmap_top,
+				ftFace->glyph->bitmap_top,
+				textureHeight - ftFace->glyph->bitmap_top,
 				NULL
 			};
 			this->loadGlyphData(glyphBitmap, &this->fontData[charCode]);
@@ -304,22 +313,22 @@ ftgxCharData *FreeTypeGX::cacheGlyphData(wchar_t charCode) {
 }
 
 /**
- * Locates each character in this wrapper's configured font face and proccess them.
+ * Locates each character in this wrapper's configured font face and process them.
  *
  * This routine locates each character in the configured font face and renders the glyph's bitmap.
- * Each bitmap and relevant information is loaded into its own quickly addressible structure within an instance-specific map.
+ * Each bitmap and relevant information is loaded into its own quickly addressable structure within an instance-specific map.
  */
-uint16_t FreeTypeGX::cacheGlyphDataComplete() {
+uint16_t FreeTypeGX::cacheGlyphDataComplete(FT_Face ftFace) {
 	uint16_t i = 0;
 	FT_UInt gIndex;
-	FT_ULong charCode = FT_Get_First_Char( this->ftFace, &gIndex );
+	FT_ULong charCode = FT_Get_First_Char( ftFace, &gIndex );
 	while ( gIndex != 0 ) {
 
-		if(this->cacheGlyphData(charCode) != NULL) {
+		if(this->cacheGlyphData(ftFace, charCode) != NULL) {
 			i++;
 		}
 
-		charCode = FT_Get_Next_Char( this->ftFace, charCode, &gIndex );
+		charCode = FT_Get_Next_Char( ftFace, charCode, &gIndex );
 	}
 	
 	return i;
@@ -438,7 +447,11 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 	uint16_t x_offset = 0, y_offset = 0;
 	GXTexObj glyphTexture;
 	FT_Vector pairDelta;
-	
+	FT_Face ftFace;
+
+	FT_New_Memory_Face(this->ftLibrary, this->ftFontBuffer, this->ftFontBufferSize, 0, &ftFace);
+	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
+
 	if(textStyle & 0x000F) {
 		x_offset = this->getStyleOffsetWidth(this->getWidth(text), textStyle);
 	}
@@ -453,13 +466,12 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 			glyphData = &this->fontData[text[i]];
 		}
 		else {
-			glyphData = this->cacheGlyphData(text[i]);
+			glyphData = this->cacheGlyphData(ftFace, text[i]);
 		}
 		
 		if(glyphData != NULL) {
-			
 			if(this->ftKerningEnabled && i) {
-				FT_Get_Kerning( this->ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
+				FT_Get_Kerning( ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
 				x_pos += pairDelta.x >> 6;
 			}
 
@@ -468,13 +480,17 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 
 			x_pos += glyphData->glyphAdvanceX;
 			printed++;
+
+			if(textStyle & 0x0F00) {
+				this->drawTextFeature(x - x_offset, y, this->getWidth(text), this->getOffset(text), textStyle, color);
+			}
 		}
 	}
 	
-	if(textStyle & 0x0F00) {
-		this->drawTextFeature(x - x_offset, y, this->getWidth(text), this->getOffset(text), textStyle, color);
-	}
-	
+
+
+	FT_Done_Face(ftFace);
+
 	return printed;
 }
 
@@ -536,7 +552,11 @@ uint16_t FreeTypeGX::getWidth(wchar_t *text) {
 	uint16_t strLength = wcslen(text);
 	uint16_t strWidth = 0;
 	FT_Vector pairDelta;
-	
+	FT_Face ftFace;
+
+	FT_New_Memory_Face(this->ftLibrary, this->ftFontBuffer, this->ftFontBufferSize, 0, &ftFace);
+	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
+
 	for (uint16_t i = 0; i < strLength; i++) {
 		
 		ftgxCharData* glyphData = NULL;
@@ -544,19 +564,20 @@ uint16_t FreeTypeGX::getWidth(wchar_t *text) {
 			glyphData = &this->fontData[text[i]];
 		}
 		else {
-			glyphData = this->cacheGlyphData(text[i]);
+			glyphData = this->cacheGlyphData(ftFace, text[i]);
 		}
 		
 		if(glyphData != NULL) {
 			if(this->ftKerningEnabled && (i > 0)) {
-				FT_Get_Kerning( this->ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
+				FT_Get_Kerning( ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta );
 				strWidth += pairDelta.x >> 6;
 			}
 
 			strWidth += glyphData->glyphAdvanceX;
 		}
 	}
-	
+	FT_Done_Face(ftFace);
+
 	return strWidth;
 }
 
@@ -595,7 +616,7 @@ uint16_t FreeTypeGX::getHeight(wchar_t const *text) {
  * Get the maximum offset above and minimum offset below the font origin line.
  * 
  * This function calculates the maximum pixel height above the font origin line and the minimum
- * pixel height below the font origin line and returns the values in an addressible structure.
+ * pixel height below the font origin line and returns the values in an addressable structure.
  * 
  * @param text	NULL terminated string to calculate.
  * @return The max and min values above and below the font origin line.
@@ -603,6 +624,10 @@ uint16_t FreeTypeGX::getHeight(wchar_t const *text) {
 ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 	uint16_t strLength = wcslen(text);
 	uint16_t strMax = 0, strMin = 0;
+	FT_Face ftFace;
+
+	FT_New_Memory_Face(this->ftLibrary, this->ftFontBuffer, this->ftFontBufferSize, 0, &ftFace);
+	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
 	
 	for (uint16_t i = 0; i < strLength; i++) {
 		
@@ -611,7 +636,7 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 			glyphData = &this->fontData[text[i]];
 		}
 		else {
-			glyphData = this->cacheGlyphData(text[i]);
+			glyphData = this->cacheGlyphData(ftFace, text[i]);
 		}
 		
 		if(glyphData != NULL) {
@@ -619,7 +644,8 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 			strMin = glyphData->renderOffsetMin > strMin ? glyphData->renderOffsetMin : strMin;
 		}
 	}
-	
+	FT_Done_Face(ftFace);
+
 	return (ftgxDataOffset){strMax, strMin};
 }
 
