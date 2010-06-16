@@ -412,10 +412,9 @@ uint16_t FreeTypeGX::getStyleOffsetWidth(uint16_t width, uint16_t format) {
  * 
  * This routine calculates the y offset of the rendered string based off of a supplied positional format parameter.
  * 
- * @param offset	Current pixel offset data of the string.
  * @param format	Positional format of the string.
  */
-uint16_t FreeTypeGX::getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format) {
+uint16_t FreeTypeGX::getStyleOffsetHeight(uint16_t format) {
 	if (format & FTGX_ALIGN_TOP ) {
 		return -this->ftAscender;
 	}
@@ -457,7 +456,7 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 		x_offset = this->getStyleOffsetWidth(this->getWidth(text), textStyle);
 	}
 	if(textStyle & 0x00F0) {
-		y_offset = this->getStyleOffsetHeight(this->getOffset(text), textStyle);
+		y_offset = this->getStyleOffsetHeight(textStyle);
 	}
 	
 	for (uint16_t i = 0; i < strLength; i++) {
@@ -483,12 +482,10 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 			printed++;
 
 			if(textStyle & 0x0F00) {
-				this->drawTextFeature(x - x_offset, y - y_offset, this->getWidth(text), this->getOffset(text), textStyle, color);
+				this->drawTextFeature(x - x_offset, y - y_offset, this->getWidth(text), textStyle, color);
 			}
 		}
 	}
-	
-
 
 	FT_Done_Face(ftFace);
 
@@ -502,11 +499,26 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t const *text, GXColor
 	return this->drawText(x, y, (wchar_t *)text, color, textStyle);
 }
 
-void FreeTypeGX::drawTextFeature(int16_t x, int16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color) {
+/**
+ * Internal routine to draw the features for stylized text.
+ *
+ * This routine creates a simple feature for stylized text.
+ *
+ * @param x	Screen X coordinate of the text baseline.
+ * @param y	Screen Y coordinate of the text baseline.
+ * @param width	Pixel width of the text string.
+ * @param textStyle	Flags which specify any styling which should be applied to the rendered string.
+ * @param color	Color to be applied to the text feature.
+ */
+void FreeTypeGX::drawTextFeature(int16_t x, int16_t y, uint16_t width, uint16_t textStyle, GXColor color) {
 	uint16_t featureHeight = this->ftPointSize >> 4 > 0 ? this->ftPointSize >> 4 : 1;
 	
-	if (format & FTGX_STYLE_UNDERLINE ) {
+	if (textStyle & FTGX_STYLE_UNDERLINE ) {
 		this->copyFeatureToFramebuffer(width, featureHeight, x, y + 1, color);
+	}
+
+	if (textStyle & FTGX_STYLE_STRIKE ) {
+		this->copyFeatureToFramebuffer(width, featureHeight, x, y - (this->ftAscender >> 2), color);
 	}
 }
 
@@ -570,29 +582,6 @@ uint16_t FreeTypeGX::getWidth(wchar_t const *text) {
  * @return The height of the text string in pixels.
  */
 uint16_t FreeTypeGX::getHeight(wchar_t *text) {
-	ftgxDataOffset offset = this->getOffset(text);
-	
-	return offset.max + offset.min;
-}
-
-/**
- * 
- * \overload
- */
-uint16_t FreeTypeGX::getHeight(wchar_t const *text) {
-	return this->getHeight((wchar_t *)text);
-}
-
-/**
- * Get the maximum offset above and minimum offset below the font origin line.
- * 
- * This function calculates the maximum pixel height above the font origin line and the minimum
- * pixel height below the font origin line and returns the values in an addressable structure.
- * 
- * @param text	NULL terminated string to calculate.
- * @return The max and min values above and below the font origin line.
- */
-ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 	uint16_t strLength = wcslen(text);
 	uint16_t strMax = 0, strMin = 0;
 	FT_Face ftFace;
@@ -601,7 +590,7 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 	FT_Set_Pixel_Sizes(ftFace, 0, this->ftPointSize);
 	
 	for (uint16_t i = 0; i < strLength; i++) {
-		
+
 		ftgxCharData* glyphData = NULL;
 		if( this->fontData.find(text[i]) != this->fontData.end() ) {
 			glyphData = &this->fontData[text[i]];
@@ -609,23 +598,22 @@ ftgxDataOffset FreeTypeGX::getOffset(wchar_t *text) {
 		else {
 			glyphData = this->cacheGlyphData(ftFace, text[i]);
 		}
-		
+
 		if(glyphData != NULL) {
 			strMax = glyphData->renderOffsetMax > strMax ? glyphData->renderOffsetMax : strMax;
 			strMin = glyphData->renderOffsetMin > strMin ? glyphData->renderOffsetMin : strMin;
 		}
 	}
 	FT_Done_Face(ftFace);
-
-	return (ftgxDataOffset){strMax, strMin};
+	return strMax + strMin;
 }
 
 /**
  * 
  * \overload
  */
-ftgxDataOffset FreeTypeGX::getOffset(wchar_t const *text) {
-	return this->getOffset(text);
+uint16_t FreeTypeGX::getHeight(wchar_t const *text) {
+	return this->getHeight((wchar_t *)text);
 }
 
 /**

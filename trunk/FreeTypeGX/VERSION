@@ -1,6 +1,9 @@
 -------------
-Version 0.2.4
+Version 0.3.0
 -------------
+- Addition of example projects.
+  Addressed (#6): http://code.google.com/p/freetypegx/issues/detail?id=6
+- Increased stability
 - Better compatibility with GRRLIB library.
 - Compatibility with libwiisprite and support for other external code through setCompatibilityMode.
 - Fixed inability to change font size.
