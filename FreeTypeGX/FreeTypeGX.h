@@ -133,6 +133,7 @@
  * \li <i>FTGX_JUSTIFY_CENTER</i>
  * \li <i>FTGX_JUSTIFY_RIGHT</i>
  * \li <i>FTGX_ALIGN_TOP</i>
+ * \li <i>FTGX_ALIGN_MIDDLE</i>
  * \li <i>FTGX_ALIGN_BOTTOM</i>
  * \li <i>FTGX_STYLE_UNDERLINE</i>
  * \li <i>FTGX_STYLE_STRIKE</i>
@@ -178,15 +179,6 @@ typedef struct ftgxCharData_ {
 	uint32_t* glyphDataTexture;	/**< Glyph texture bitmap data buffer. */
 } ftgxCharData;
 
-/*! \struct ftgxDataOffset_
- * 
- * Offset structure which hold both a maximum and minimum value.
- */
-typedef struct ftgxDataOffset_ {
-	uint16_t max;	/**< Maximum data offset. */
-	uint16_t min;	/**< Minimum data offset. */
-} ftgxDataOffset;
-
 #define _TEXT(t) L ## t /**< Unicode helper macro. */
 
 #define FTGX_NULL				0x0000
@@ -199,7 +191,7 @@ typedef struct ftgxDataOffset_ {
 #define FTGX_ALIGN_BOTTOM		0x0040
 
 #define FTGX_STYLE_UNDERLINE	0x0100
-#define FTGX_STYLE_STRIKE		0x0200 /**< Deprecated */
+#define FTGX_STYLE_STRIKE		0x0200
 
 #define FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_MODULATE	0X0001
 #define FTGX_COMPATIBILITY_DEFAULT_TEVOP_GX_DECAL		0X0002
@@ -221,7 +213,7 @@ const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color
 /*! \class FreeTypeGX
  * \brief Wrapper class for the FreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.2.4
+ * \version 0.3.0
  * 
  * FreeTypeGX acts as a wrapper class for the FreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -248,7 +240,7 @@ class FreeTypeGX {
 		static uint16_t adjustTextureHeight(uint16_t textureHeight, uint8_t textureFormat);
 
 		uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
-		uint16_t getStyleOffsetHeight(ftgxDataOffset offset, uint16_t format);
+		uint16_t getStyleOffsetHeight(uint16_t format);
 
 		void unloadFont();
 		ftgxCharData *cacheGlyphData(FT_Face ftFace, wchar_t charCode);
@@ -257,7 +249,7 @@ class FreeTypeGX {
 
 		void setDefaultMode();
 
-		void drawTextFeature(int16_t x, int16_t y, uint16_t width, ftgxDataOffset offsetData, uint16_t format, GXColor color);
+		void drawTextFeature(int16_t x, int16_t y, uint16_t width, uint16_t format, GXColor color);
 		void copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 texHeight, int16_t screenX, int16_t screenY, GXColor color);
 		void copyFeatureToFramebuffer(f32 featureWidth, f32 featureHeight, int16_t screenX, int16_t screenY,  GXColor color);
 		
@@ -280,8 +272,6 @@ class FreeTypeGX {
 		uint16_t getWidth(wchar_t const *text);
 		uint16_t getHeight(wchar_t *text);
 		uint16_t getHeight(wchar_t const *text);
-		ftgxDataOffset getOffset(wchar_t *text);
-		ftgxDataOffset getOffset(wchar_t const *text);
 };
 
 #endif /* FREETYPEGX_H_ */
