@@ -12,7 +12,7 @@ void PadSystem::initializePadSystem() {
 #endif
 }
 
-u32 PadSystem::scanPads(int controller) {
+uint32_t PadSystem::scanPads(int controller) {
 #ifdef __WIISYSTEM__
 	WPAD_ScanPads();
 	return WPAD_ButtonsDown(controller);
@@ -22,13 +22,69 @@ u32 PadSystem::scanPads(int controller) {
 #endif
 }
 
-bool PadSystem::pressedExitButton(u32 buttonsDown) {
+bool PadSystem::pressedExitButton(uint32_t buttonsDown) {
 #ifdef __WIISYSTEM__
 	if (buttonsDown & WPAD_BUTTON_HOME) {
 		return true;
 	}
 #else
 	if (buttonsDown & PAD_BUTTON_START) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+bool PadSystem::pressedUp(uint32_t buttonsDown) {
+#ifdef __WIISYSTEM__
+	if (buttonsDown & WPAD_BUTTON_UP) {
+		return true;
+	}
+#else
+	if (buttonsDown & PAD_BUTTON_UP) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+bool PadSystem::pressedDown(uint32_t buttonsDown) {
+#ifdef __WIISYSTEM__
+	if (buttonsDown & WPAD_BUTTON_DOWN) {
+		return true;
+	}
+#else
+	if (buttonsDown & PAD_BUTTON_DOWN) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+bool PadSystem::pressedLeft(uint32_t buttonsDown) {
+#ifdef __WIISYSTEM__
+	if (buttonsDown & WPAD_BUTTON_LEFT) {
+		return true;
+	}
+#else
+	if (buttonsDown & PAD_BUTTON_LEFT) {
+		return true;
+	}
+#endif
+
+	return false;
+}
+
+bool PadSystem::pressedRight(uint32_t buttonsDown) {
+#ifdef __WIISYSTEM__
+	if (buttonsDown & WPAD_BUTTON_RIGHT) {
+		return true;
+	}
+#else
+	if (buttonsDown & PAD_BUTTON_RIGHT) {
 		return true;
 	}
 #endif
