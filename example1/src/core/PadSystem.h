@@ -16,5 +16,9 @@ class PadSystem {
 		PadSystem();
 		uint32_t scanPads(int controller);
 		bool pressedExitButton(uint32_t buttons);
+		bool pressedUp(uint32_t buttons);
+		bool pressedDown(uint32_t buttons);
+		bool pressedLeft(uint32_t buttons);
+		bool pressedRight(uint32_t buttons);
 };
 #endif /*PADSYSTEM_H_*/
