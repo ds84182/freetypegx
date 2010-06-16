@@ -16,18 +16,28 @@ int main(int argc, char **argv) {
 	fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, fontSize, false);	// Initialize the font system with the font parameters from rursus_compact_mono_ttf.h
 
 	uint32_t buttons = 0x0000;
+	uint32_t textStyle = FTGX_JUSTIFY_CENTER;
 	bool isUnderlined = false;
 	bool isStrike = false;
 
-	while(!padSystem->pressedExitButton(buttons)) {
+	while(!padSystem->pressedExitButton(buttons = padSystem->scanPads(0))) {
 
-		uint32_t textStyle = FTGX_JUSTIFY_CENTER;
-		if(isUnderlined) {
-			textStyle |= FTGX_STYLE_UNDERLINE;
+		if(padSystem->pressedUp(buttons)) {	// Increase font size
+			fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, ++fontSize, false);
 		}
-		if(isStrike) {
-			textStyle |= FTGX_STYLE_STRIKE;
+		if(padSystem->pressedDown(buttons)) {	// Decrease font size
+			fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, fontSize > 6 ? --fontSize : fontSize, false);
 		}
+		if(padSystem->pressedLeft(buttons)) {	// Toggle text underlining
+			isUnderlined = !isUnderlined;
+		}
+		if(padSystem->pressedRight(buttons)) {	// Toggle text strikeout
+			isStrike = !isStrike;
+		}
+
+		textStyle = FTGX_JUSTIFY_CENTER;
+		textStyle = isUnderlined	? textStyle | FTGX_STYLE_UNDERLINE	: textStyle;
+		textStyle = isStrike		? textStyle | FTGX_STYLE_STRIKE		: textStyle;
 
 		fontSystem->drawText(320,	50,		_TEXT("THE QUICK BROWN"),	(GXColor){0xff, 0x00, 0x00, 0xff},	textStyle | FTGX_ALIGN_TOP);
 		fontSystem->drawText(320,	125,	_TEXT("FOX JUMPS OVER"),	(GXColor){0x00, 0xff, 0x00, 0xff},	textStyle | FTGX_ALIGN_MIDDLE);
@@ -39,20 +49,6 @@ int main(int argc, char **argv) {
 
 		graphicsSystem->updateScene(videoSystem->getVideoFramebuffer());
 		videoSystem->flipVideoFramebuffer();
-
-		buttons = padSystem->scanPads(0);
-		if(padSystem->pressedUp(buttons)) {
-			fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, ++fontSize, false);
-		}
-		if(padSystem->pressedDown(buttons)) {
-			fontSystem->loadFont(rursus_compact_mono_ttf, rursus_compact_mono_ttf_size, fontSize > 6 ? --fontSize : fontSize, false);
-		}
-		if(padSystem->pressedLeft(buttons)) {
-			isUnderlined = !isUnderlined;
-		}
-		if(padSystem->pressedRight(buttons)) {
-			isStrike = !isStrike;
-		}
 	}
 
 	delete fontSystem;
