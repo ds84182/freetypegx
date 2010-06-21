@@ -1,17 +1,50 @@
+/*
+ * example2
+ *
+ * This example demonstrates the use of the devkitPro FAT interface routines in order to
+ * dynamically load a TrueType font from the SD card. In reality this should be the "correct"
+ * way of loading a font file into your program in order to retain both flexibility and small
+ * executable object size.
+ *
+ * As noted in the documentation realize that the font file interaction routine is for example
+ * purposes only, and any production-worthy implementation should contain much more robust
+ * error checking and handling.
+ *
+ * Program Controls:
+ * -----------------
+ * Up 		Increase font size
+ * Down		Decrease font size
+ * Left		Toggle text underlining
+ * Right	Toggle text strikethrough
+ * Home		Exit
+ *
+ */
+
 #include "core/GraphicsSystem.h"
 #include "core/PadSystem.h"
 #include "core/VideoSystem.h"
 
 #include <FreeTypeGX.h>
-
 #include <fat.h>
-#include <dirent.h>
 
 #define TTF_PATH "rursus_compact_mono.ttf"	// Path to the TrueType font on the SD card.
 
+/**
+ * Loads a font from the provided font path into the supplied font data buffer.
+ *
+ * This routine reads in a TypeType font file from the provided file path and loads it into
+ * the supplied font data buffer. Note that it is the user's responsibility to free the supplied
+ * buffer once it is no longer needed. Also note that this routine is for example purposes only
+ * and any actual production code should be much more robust in its error checking.
+ *
+ * @param filePath	Path to the TrueType font including the file name.
+ * @param fontData	A pointer to the font buffer which will hold the file data.
+ *
+ * @return The size of the TrueType font file which was loaded.
+ */
 FT_Long loadFontFromFile(const char* filePath, uint8_t** fontData) {
 	FILE* ttfFile = fopen(filePath, "r");
-	fseek(ttfFile, 0, SEEK_END);	// Calculate the size of the font by seeking tothe end of the file
+	fseek(ttfFile, 0, SEEK_END);	// Calculate the size of the font by seeking to the end of the file
 	int fileSize = ftell(ttfFile);	// ...and getting your file cursor position.
 	rewind(ttfFile);	// Back up to the head of the file.
 
@@ -25,6 +58,14 @@ FT_Long loadFontFromFile(const char* filePath, uint8_t** fontData) {
 	return fileSize;
 }
 
+/**
+ * Program entry point.
+ *
+ * @param argc	Number of provided command line parameters.
+ * @param argv	List of command line parameters.
+ *
+ * @return Program exit status code.
+ */
 int main(int argc, char **argv) {
 	if(!fatInitDefault()) {
 		return 0;	// Unrecoverable error.
@@ -57,7 +98,7 @@ int main(int argc, char **argv) {
 		if(padSystem->pressedLeft(buttons)) {	// Toggle text underlining
 			isUnderlined = !isUnderlined;
 		}
-		if(padSystem->pressedRight(buttons)) {	// Toggle text strikeout
+		if(padSystem->pressedRight(buttons)) {	// Toggle text strikethrough
 			isStrike = !isStrike;
 		}
 
