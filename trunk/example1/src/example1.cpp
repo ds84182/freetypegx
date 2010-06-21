@@ -1,3 +1,30 @@
+/*
+ * example1
+ *
+ * This example demonstrates the use of bin2o in order to compile a font into an
+ * object file which can be linked into the final executable dol/elf.
+ *
+ * Modify your Makefile to scan the directories containing the TrueType font.
+ * Leverage the bin2o tool included in the devkitPro by adding the following code to the Makefile:
+ *
+ * # --- Begin Makefile snippet ---
+ * %.ttf.o	:	%.ttf
+ *	@echo $(notdir $<)
+ *	$(bin2o)
+ * # --- End Makefile snippet ---
+ *
+ * For this example we have converted the Rursus Compact Mono font (data/rursus_compact_mono.tff) and have
+ * included the compiled font data pointers as contained in the generated rorsus_compact_mono_ttf.h file.
+ *
+ * Program Controls:
+ * -----------------
+ * Up 		Increase font size
+ * Down		Decrease font size
+ * Left		Toggle text underlining
+ * Right	Toggle text strikethrough
+ * Home		Exit
+ *
+ */
 #include "core/GraphicsSystem.h"
 #include "core/PadSystem.h"
 #include "core/VideoSystem.h"
@@ -5,7 +32,14 @@
 #include <FreeTypeGX.h>
 #include "rursus_compact_mono_ttf.h"	// Include the compiled font.
 										// Once compiled you can view the contents of this file in example1/all/rursus_compact_mono_ttf.h
-
+/**
+ * Program entry point.
+ *
+ * @param argc	Number of provided command line parameters.
+ * @param argv	List of command line parameters.
+ *
+ * @return Program exit status code.
+ */
 int main(int argc, char **argv) {
 	VideoSystem* videoSystem = new VideoSystem();
 	GraphicsSystem *graphicsSystem = new GraphicsSystem(videoSystem);
@@ -31,7 +65,7 @@ int main(int argc, char **argv) {
 		if(padSystem->pressedLeft(buttons)) {	// Toggle text underlining
 			isUnderlined = !isUnderlined;
 		}
-		if(padSystem->pressedRight(buttons)) {	// Toggle text strikeout
+		if(padSystem->pressedRight(buttons)) {	// Toggle text strikethrough
 			isStrike = !isStrike;
 		}
 
