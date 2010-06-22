@@ -6,10 +6,14 @@
  * way of loading a font file into your program in order to retain both flexibility and small
  * executable object size.
  *
+ * For this example simple copy the rursus_compact_mono.ttf font from example1/data into the
+ * root directory of the SD and insert it into the Wii.
+ *
  * As noted in the documentation realize that the font file interaction routine is for example
  * purposes only, and any production-worthy implementation should contain much more robust
  * error checking and handling.
  *
+ * -----------------
  * Program Controls:
  * -----------------
  * Up 		Increase font size
