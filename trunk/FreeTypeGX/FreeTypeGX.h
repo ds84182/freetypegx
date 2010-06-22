@@ -1,7 +1,7 @@
 /* 
  * FreeTypeGX is a wrapper class for libFreeType which renders a compiled
  * FreeType parsable font into a GX texture for Wii homebrew development.
- * Copyright (C) 2008 Armin Tamzarian
+ * Copyright (C) 2008-2010 Armin Tamzarian
  * 
  * This file is part of FreeTypeGX.
  * 
@@ -27,7 +27,7 @@
  * <br>
  * FreeTypeGX is written in C++ and makes use of a selectable pre-buffered or buffer-on-demand methodology to allow fast and efficient printing of text to the EFB.  
  * <p>
- * This library was developed in-full by Armin Tamzarian with the support of developers in \#wiibrew on EFnet. 
+ * This library was developed in-full by Armin Tamzarian with the support of developers in \#wiidev on EFnet.
  * 
  * \section sec_installation_source Installation (Source Code)
  * 
@@ -45,7 +45,7 @@
  * -# Ensure that you have the <a href = "http://sourceforge.net/projects/devkitpro/files/portlibs/">FreeType</a> Wii library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Ensure that you have the <a href = "http://code.google.com/p/metaphrasis">Metaphrasis</a> library installed in your development environment with the library added to your Makefile where appropriate.
  * -# Extract the FreeTypeGX archive.
- * -# Copy the contents of the <i>lib</i> directory into your <i>devKitPro/libogc</i> directory.
+ * -# Copy the contents of the <i>libogc</i> directory into your <i>devKitPro/libogc</i> directory.
  * -# Include the FreeTypeGX header file in your code using syntax such as the following:
  * \code
  * #include "FreeTypeGX.h"
@@ -53,26 +53,15 @@
  * 
  * \section sec_freetypegx_prerequisites FreeTypeGX Prerequisites
  * 
- * Before you begin using FreeTypeGX in your project you must ensure that the desired font in compiled into your project. For this example I will assume you are building your project with a Makefile using devKitPro evironment and are attempting to include a font whose filename is rursus_compact_mono.ttf. 
- *
- * -# Copy the font into a directory which will be processed by the project's Makefile. If you are unsure about where you should place your font just copy the it into your project's source directory.
- * \n\n
- * -# Modify the Makefile to convert the font into an object file:
- * \code
- * %.ttf.o : %.ttf
- * 	@echo $(notdir $<)
- * 	$(bin2o)
- * \endcode
+ * Before you begin using FreeTypeGX in your project you must ensure that the you have some method by which to allocate the font data buffer for use within the initialization routines. For examples showing the most common methods to generate a font data buffer for use with FreeTypeGX see the included examples. These examples illustrate the following methods:
  * \n
- * -# Include the font object's generated header file in your source code:
- * \code
- * #include "rursus_compact_mono_ttf.h"
- * \endcode
- * This header file defines the two variables that you will need for use within your project:
- * \code
- * extern const u8 rursus_compact_mono_ttf[];	A pointer to the font buffer within the compiled project.
- * extern const u32 rursus_compact_mono_ttf_size;	The size of the font's buffer in bytes.
- * \endcode
+ * \li <i>example1</i> - Compiling a font into the executable
+ * \li <i>example2</i> - Loading a font from a file located on an SD card or USB drive
+ *
+ * Note that both of these example result with the creation of the following example variables:
+ *
+ * \li <i>uint8_t* rursus_compact_mono_ttf</i> - A buffer containing the font data.
+ * \li <i>FT_Long rursus_compact_mono_ttf_size</i> - A long value containing the size of the font data buffer in bytes.
  * 
  * \section sec_freetypegx_usage FreeTypeGX Usage
  * 
