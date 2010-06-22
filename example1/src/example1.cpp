@@ -8,14 +8,17 @@
  * Leverage the bin2o tool included in the devkitPro by adding the following code to the Makefile:
  *
  * # --- Begin Makefile snippet ---
+ *
  * %.ttf.o	:	%.ttf
  *	@echo $(notdir $<)
  *	$(bin2o)
+ *
  * # --- End Makefile snippet ---
  *
  * For this example we have converted the Rursus Compact Mono font (data/rursus_compact_mono.tff) and have
  * included the compiled font data pointers as contained in the generated rorsus_compact_mono_ttf.h file.
  *
+ * -----------------
  * Program Controls:
  * -----------------
  * Up 		Increase font size
