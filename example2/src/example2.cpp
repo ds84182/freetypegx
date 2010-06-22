@@ -71,6 +71,7 @@ FT_Long loadFontFromFile(const char* filePath, uint8_t** fontData) {
  * @return Program exit status code.
  */
 int main(int argc, char **argv) {
+
 	if(!fatInitDefault()) {
 		return 0;	// Unrecoverable error.
 	}
