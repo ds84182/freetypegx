@@ -1,4 +1,17 @@
 -------------
+Version 0.3.1
+-------------
+- Performance enhancements from Tantric.
+	- Missing call to GX_InvalidateTexAll
+	- Misdirection optimizations
+- Performance enhancements from dimok.
+	- Removal of dreadfully slow wcslen calls.
+	- Better variable masking and branching.
+	- Break on max width overrun.
+- Increased fully cached drawText rate to ~14kHz for benchmark text.
+- Increased stability and performance.
+
+-------------
 Version 0.3.0
 -------------
 - Addition of example projects.
