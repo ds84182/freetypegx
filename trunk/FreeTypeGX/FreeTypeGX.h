@@ -27,7 +27,7 @@
  * <br>
  * FreeTypeGX is written in C++ and makes use of a selectable pre-buffered or buffer-on-demand methodology to allow fast and efficient printing of text to the EFB.  
  * <p>
- * This library was developed in-full by Armin Tamzarian with the support of developers in \#wiidev on EFnet.
+ * This library was developed in-full by Armin Tamzarian with the support of developers in \#wiidev on EFnet. Special thanks go out to Tantric of <a href = "http://code.google.com/u/dborth/">too much to list</a> and dimok of <a href="http://code.google.com/p/wiixplorer">WiiXplorer</a> for their performance modifications.
  * 
  * \section sec_installation_source Installation (Source Code)
  * 
@@ -147,7 +147,6 @@
 
 #include <malloc.h>
 #include <string.h>
-#include <wchar.h>
 #include <map>
 
 /*! \struct ftgxCharData_
@@ -169,16 +168,21 @@ typedef struct ftgxCharData_ {
 } ftgxCharData;
 
 #define _TEXT(t) L ## t /**< Unicode helper macro. */
+#define EXPLODE_UINT8_TO_UINT32(x) (x << 24) | (x << 16) | (x << 8) | x
 
 #define FTGX_NULL				0x0000
+
+#define FTGX_JUSTIFY_MASK		0x000f
 #define FTGX_JUSTIFY_LEFT		0x0001
 #define FTGX_JUSTIFY_CENTER		0x0002
 #define FTGX_JUSTIFY_RIGHT		0x0004
 
+#define FTGX_ALIGN_MASK			0x00f0
 #define FTGX_ALIGN_TOP			0x0010
 #define FTGX_ALIGN_MIDDLE		0x0020
 #define FTGX_ALIGN_BOTTOM		0x0040
 
+#define FTGX_STYLE_MASK			0x0f00
 #define FTGX_STYLE_UNDERLINE	0x0100
 #define FTGX_STYLE_STRIKE		0x0200
 
@@ -202,7 +206,7 @@ const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color
 /*! \class FreeTypeGX
  * \brief Wrapper class for the FreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.3.0
+ * \version 0.3.1
  * 
  * FreeTypeGX acts as a wrapper class for the FreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -219,11 +223,14 @@ class FreeTypeGX {
 		FT_Short ftDescender;		/**< Descender value of the rendered font. */
 
 		bool ftKerningEnabled;		/**< Flag indicating the availability of font kerning data. */
+		FT_Face ftFace;				/**< Reusable FreeType FT_Face object. */
 		
 		uint8_t textureFormat;		/**< Defined texture format of the target EFB. */
 		uint8_t vertexIndex;		/**< Vertex format descriptor index. */
 		uint32_t compatibilityMode;	/**< Compatibility mode for default tev operations and vertex descriptors. */	
 		std::map<wchar_t, ftgxCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
+
+		static uint16_t maxVideoWidth; /**< Maximum width of the video screen. */
 
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
 		static uint16_t adjustTextureHeight(uint16_t textureHeight, uint8_t textureFormat);
@@ -232,8 +239,8 @@ class FreeTypeGX {
 		uint16_t getStyleOffsetHeight(uint16_t format);
 
 		void unloadFont();
-		ftgxCharData *cacheGlyphData(FT_Face ftFace, wchar_t charCode);
-		uint16_t cacheGlyphDataComplete(FT_Face ftFace);
+		ftgxCharData *cacheGlyphData(wchar_t charCode);
+		uint16_t cacheGlyphDataComplete();
 		void loadGlyphData(FT_Bitmap *bmp, ftgxCharData *charData);
 
 		void setDefaultMode();
@@ -250,6 +257,7 @@ class FreeTypeGX {
 		static wchar_t* charToWideChar(const char* p);
 		void setVertexFormat(uint8_t vertexIndex);
 		void setCompatibilityMode(uint32_t compatibilityMode);
+		static uint16_t setMaxVideoWidth(uint16_t width);
 
 		uint16_t loadFont(uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
 		uint16_t loadFont(const uint8_t* fontBuffer, FT_Long bufferSize, FT_UInt pointSize, bool cacheAll = false);
