@@ -206,7 +206,7 @@ const GXColor ftgxWhite = (GXColor){0xff, 0xff, 0xff, 0xff}; /**< Constant color
 /*! \class FreeTypeGX
  * \brief Wrapper class for the FreeType library with GX rendering.
  * \author Armin Tamzarian
- * \version 0.3.1
+ * \version 0.3.2
  * 
  * FreeTypeGX acts as a wrapper class for the FreeType library. It supports precaching of transformed glyph data into
  * a specified texture format. Rendering of the data to the EFB is accomplished through the application of high performance
@@ -230,6 +230,9 @@ class FreeTypeGX {
 		uint32_t compatibilityMode;	/**< Compatibility mode for default tev operations and vertex descriptors. */	
 		std::map<wchar_t, ftgxCharData> fontData; /**< Map which holds the glyph data structures for the corresponding characters. */
 
+		bool widthCachingEnabled;
+		std::map<const wchar_t*, uint16_t> cacheTextWidth;
+
 		static uint16_t maxVideoWidth; /**< Maximum width of the video screen. */
 
 		static uint16_t adjustTextureWidth(uint16_t textureWidth, uint8_t textureFormat);
@@ -237,6 +240,7 @@ class FreeTypeGX {
 
 		uint16_t getStyleOffsetWidth(uint16_t width, uint16_t format);
 		uint16_t getStyleOffsetHeight(uint16_t format);
+		ftgxCharData* getCharacter(wchar_t character);
 
 		void unloadFont();
 		ftgxCharData *cacheGlyphData(wchar_t charCode);
@@ -252,6 +256,12 @@ class FreeTypeGX {
 	public:
 		FreeTypeGX(uint8_t textureFormat = GX_TF_RGBA8, uint8_t vertexIndex = GX_VTXFMT1);
 		~FreeTypeGX();
+
+		bool setKerningEnabled(bool enabled);
+		bool getKerningEnabled();
+		bool setTextWidthCachingEnabled(bool enabled);
+		bool getTextWidthCachingEnabled();
+		void clearTextWidthCache();
 
 		static wchar_t* charToWideChar(char* p);
 		static wchar_t* charToWideChar(const char* p);

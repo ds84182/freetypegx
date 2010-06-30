@@ -220,7 +220,75 @@ void FreeTypeGX::unloadFont() {
 	}
 	FT_Done_Face(this->ftFace);
 
+	this->cacheTextWidth.clear();
 	this->fontData.clear();
+}
+
+/**
+ * Enables or disables kerning of the output text.
+ *
+ * This routine enables or disables kerning of the output text only if kerning is supported by the font.
+ * Note that by default kerning is enabled if it is supported by the font.
+ *
+ * @param enabled	The enabled state of the font kerning.
+ * @return The resultant enabled state of the font kerning.
+ */
+bool FreeTypeGX::setKerningEnabled(bool enabled) {
+	if(!enabled) {
+		return this->ftKerningEnabled = false;
+	}
+
+	if(FT_HAS_KERNING(this->ftFace)) {
+		return this->ftKerningEnabled = true;
+	}
+
+	return false;
+}
+
+/**
+ * Gets the current enabled state of the font kerning mode.
+ *
+ * This routine gets the current enabled state of the font kerning mode.
+ *
+ * @return The enabled state of the font kerning.
+ */
+bool FreeTypeGX::getKerningEnabled() {
+	return this->ftKerningEnabled;
+}
+
+/**
+ * Enables or disables width value caching of the output text.
+ *
+ * This routine enables or disables width value caching of the output text in order avoid a repeated possible calculation of
+ * textual width within the drawText function. If enabled FreeTypeGX will cache the values of all text strings drawn until such
+ * time that clearTextWidthCache is called in order clear the current cache. Font width caching may be enabled or disabled at
+ * any time by calling this function. Note that by default this option is disabled to conserve memory.
+ *
+ * @param enabled	The desired enabled state of the text width caching.
+ * @return The resultant enabled state of the text width caching.
+ */
+bool FreeTypeGX::setTextWidthCachingEnabled(bool enabled) {
+	return this->widthCachingEnabled = enabled;
+}
+
+/**
+ * Gets the current enabled state of the text width caching mode.
+ *
+ * This routine gets the current enabled state of the text width caching mode.
+ *
+ * @return The enabled state of the text width caching.
+ */
+bool FreeTypeGX::getTextWidthCachingEnabled() {
+	return this->widthCachingEnabled;
+}
+
+/**
+ * Clears the current cache of text widths.
+ *
+ * This clears the cache of text widths regardless of the enabled state of the width caching flag.
+ */
+void FreeTypeGX::clearTextWidthCache() {
+	this->cacheTextWidth.clear();
 }
 
 /**
@@ -443,6 +511,24 @@ uint16_t FreeTypeGX::getStyleOffsetHeight(uint16_t format) {
 }
 
 /**
+ * Returns the FreeTypeGX font character data structure.
+ *
+ * This routine locates the currently cached FreeTypeGX ftgxCharData structure for the supplied wide character. If the
+ * structure has not been loaded and cached the routine initialized the loading and caching of the structure for that
+ * data chatracter.
+ *
+ * @param character	Character whose information needs to be retrieved.
+ * @return The font structure for the supplied character.
+ */
+ftgxCharData* FreeTypeGX::getCharacter(wchar_t character) {
+	if( this->fontData.find(character) != this->fontData.end() ) {
+		return &this->fontData[character];
+	}
+
+	return this->cacheGlyphData(character);
+}
+
+/**
  * Processes the supplied text string and prints the results at the specified coordinates.
  * 
  * This routine processes each character of the supplied text string, loads the relevant preprocessed bitmap buffer,
@@ -461,9 +547,16 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 	GXTexObj glyphTexture;
 	FT_Vector pairDelta;
 
-	if(textStyle & FTGX_JUSTIFY_MASK) {
-		x_offset = this->getStyleOffsetWidth(this->getWidth(text), textStyle);
+	uint16_t textWidth = 0;
+
+	if(this->widthCachingEnabled) {
+		textWidth = this->cacheTextWidth.find(text) != this->cacheTextWidth.end() ? this->cacheTextWidth[text] : this->cacheTextWidth[text] = this->getWidth(text);
 	}
+
+	if(textStyle & FTGX_JUSTIFY_MASK) {
+		x_offset = this->getStyleOffsetWidth(textWidth > 0 ? textWidth : this->getWidth(text), textStyle);
+	}
+
 	if(textStyle & FTGX_ALIGN_MASK) {
 		y_offset = this->getStyleOffsetHeight(textStyle);
 	}
@@ -474,13 +567,7 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 			break;
 		}
 
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
+		ftgxCharData* glyphData = getCharacter(text[i]);
 		
 		if(glyphData != NULL) {
 			if(this->ftKerningEnabled && i) {
@@ -499,7 +586,7 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
 	}
 
 	if(textStyle & FTGX_STYLE_MASK) {
-		this->drawTextFeature(x - x_offset, y - y_offset, this->getWidth(text), textStyle, color);
+		this->drawTextFeature(x - x_offset, y - y_offset, textWidth > 0 ? textWidth : textWidth = this->getWidth(text), textStyle, color);
 	}
 
 	return printed;
@@ -547,17 +634,12 @@ void FreeTypeGX::drawTextFeature(int16_t x, int16_t y, uint16_t width, uint16_t 
 uint16_t FreeTypeGX::getWidth(wchar_t *text) {
 	uint16_t strWidth = 0;
 	FT_Vector pairDelta;
+	ftgxCharData* glyphData = NULL;
 
 	int i = 0;
 	while(text[i]) {
 
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
+		glyphData = getCharacter(text[i]);
 		
 		if(glyphData != NULL) {
 			if(this->ftKerningEnabled && (i > 0)) {
@@ -597,13 +679,7 @@ uint16_t FreeTypeGX::getHeight(wchar_t *text) {
 	int i = 0;
 	while(text[i]) {
 
-		ftgxCharData* glyphData = NULL;
-		if( this->fontData.find(text[i]) != this->fontData.end() ) {
-			glyphData = &this->fontData[text[i]];
-		}
-		else {
-			glyphData = this->cacheGlyphData(text[i]);
-		}
+		ftgxCharData* glyphData = getCharacter(text[i]);
 
 		if(glyphData != NULL) {
 			strMax = glyphData->renderOffsetMax > strMax ? glyphData->renderOffsetMax : strMax;
@@ -648,15 +724,15 @@ void FreeTypeGX::copyTextureToFramebuffer(GXTexObj *texObj, f32 texWidth, f32 te
 		GX_Position2s16(screenX, screenY);
 		GX_Color4u8(color.r, color.g, color.b, color.a);
 		GX_TexCoord2f32(0.0f, 0.0f);
-		
+
 		GX_Position2s16(texWidth + screenX, screenY);
 		GX_Color4u8(color.r, color.g, color.b, color.a);
 		GX_TexCoord2f32(1.0f, 0.0f);
-		
+
 		GX_Position2s16(texWidth + screenX, texHeight + screenY);
 		GX_Color4u8(color.r, color.g, color.b, color.a);
 		GX_TexCoord2f32(1.0f, 1.0f);
-		
+
 		GX_Position2s16(screenX, texHeight + screenY);
 		GX_Color4u8(color.r, color.g, color.b, color.a);
 		GX_TexCoord2f32(0.0f, 1.0f);

@@ -1,4 +1,11 @@
 -------------
+Version 0.3.2
+-------------
+- Addition of setKerningEnabled and getKerningEnabled methods for end user performance tweaking.
+- Addition of text width caching functionality.
+- Increased fully cached drawText rate to ~18kHz with text width caching enabled for benchmark text.
+
+-------------
 Version 0.3.1
 -------------
 - Performance enhancements from Tantric.
