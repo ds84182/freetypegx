@@ -218,7 +218,9 @@ void FreeTypeGX::unloadFont() {
 	for( std::map<wchar_t, ftgxCharData>::iterator i = this->fontData.begin(); i != this->fontData.end(); i++) {
 		free(i->second.glyphDataTexture);
 	}
-	FT_Done_Face(this->ftFace);
+	if(this->ftFace) {
+		FT_Done_Face(this->ftFace);
+	}
 
 	this->cacheTextWidth.clear();
 	this->fontData.clear();
